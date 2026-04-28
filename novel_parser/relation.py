@@ -5,12 +5,13 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .normalizer import ENTITY_ALIASES
 from .structure import Chapter
 
-CANONICAL_NAMES = list(ENTITY_ALIASES.keys())
+CANONICAL_NAMES = set(ENTITY_ALIASES.keys())
+JIEBA_BACKEND = "unavailable"
 
 RELATION_VERBS: Dict[str, str] = {
     "喜歡": "喜欢", "喜欢": "喜欢", "愛": "喜欢", "爱": "喜欢",
@@ -43,7 +44,6 @@ def _extract_entities_in_window(text: str, center: int, radius: int = 40) -> Lis
 def extract_relations_rule(chapters: List[Chapter]) -> List[Tuple[str, str, str]]:
     """Extract (subject, relation, object) by pattern matching around relation verbs."""
     triples = []
-    # Build regex once
     verb_pattern = re.compile(
         "(" + "|".join(map(re.escape, RELATION_VERBS.keys())) + ")"
     )
@@ -58,40 +58,98 @@ def extract_relations_rule(chapters: List[Chapter]) -> List[Tuple[str, str, str]
 
 
 def extract_relations_jieba(chapters: List[Chapter]) -> List[Tuple[str, str, str]]:
-    """Optional: jieba POS-based relation extraction (slow on large texts)."""
+    """Jieba-enhanced: one POS-tag pass per chapter, then scan (nr, verb, nr) patterns.
+    Much faster than per-window tagging (~30-60s for 1.3M chars total)."""
+    global JIEBA_BACKEND
     try:
-        import jieba.posseg as pseg
+        import jieba_fast as jieba
+        import jieba_fast.posseg as pseg
+
+        JIEBA_BACKEND = "jieba_fast"
     except ImportError:
-        return []
+        try:
+            import jieba
+            import jieba.posseg as pseg
+
+            JIEBA_BACKEND = "jieba"
+        except ImportError:
+            JIEBA_BACKEND = "unavailable"
+            return []
+
     for name in CANONICAL_NAMES:
-        import jieba
         jieba.add_word(name, tag="nr")
+
     triples = []
+    verb_set = set(RELATION_VERBS.keys())
     for ch in chapters:
         words = list(pseg.cut(ch.body))
-        names = [(w.word, i) for i, w in enumerate(words) if w.flag == "nr" and w.word in CANONICAL_NAMES]
-        for i in range(len(names) - 1):
-            a, idx_a = names[i]
-            b, idx_b = names[i + 1]
-            gap = words[idx_a + 1:idx_b]
-            gap_str = "".join(w.word for w in gap)
-            for verb, rel_type in RELATION_VERBS.items():
-                if verb in gap_str:
-                    triples.append((a, rel_type, b))
-                    break
+        # Scan sliding window over the word list
+        i = 0
+        while i < len(words):
+            w = words[i]
+            if w.flag == "nr" and w.word in CANONICAL_NAMES:
+                # look forward for a verb then another nr within next 12 words
+                for j in range(i + 1, min(i + 12, len(words))):
+                    mid = words[j]
+                    if mid.word in verb_set and mid.flag.startswith("v"):
+                        for k in range(j + 1, min(j + 8, len(words))):
+                            end_w = words[k]
+                            if end_w.flag == "nr" and end_w.word in CANONICAL_NAMES:
+                                triples.append((w.word, RELATION_VERBS[mid.word], end_w.word))
+                                i = k  # advance to avoid duplicate overlap
+                                break
+                        break
+            i += 1
     return triples
 
 
-def export_relations(chapters: List[Chapter], out_dir: Path, use_jieba: bool = False) -> None:
+def export_relations(
+    chapters: List[Chapter],
+    out_dir: Path,
+    use_jieba: bool = False,
+    jieba_chapter_limit: Optional[int] = None,
+    jieba_cache_path: Optional[Path] = None,
+) -> None:
     out_dir.mkdir(exist_ok=True)
     rule_triples = extract_relations_rule(chapters)
-    jieba_triples = extract_relations_jieba(chapters) if use_jieba else []
+    jieba_chapters = chapters
+    if jieba_chapter_limit is not None:
+        jieba_chapters = chapters[:max(0, jieba_chapter_limit)]
+    jieba_cache_hit = False
+    jieba_triples: List[Tuple[str, str, str]] = []
+    if use_jieba:
+        if jieba_cache_path and jieba_cache_path.exists():
+            cached = json.loads(jieba_cache_path.read_text(encoding="utf-8"))
+            jieba_triples = [tuple(item) for item in cached.get("triples", [])]
+            jieba_cache_hit = True
+        else:
+            jieba_triples = extract_relations_jieba(jieba_chapters)
+            if jieba_cache_path:
+                jieba_cache_path.parent.mkdir(exist_ok=True)
+                jieba_cache_path.write_text(
+                    json.dumps(
+                        {
+                            "chapter_limit": jieba_chapter_limit,
+                            "chapters_analyzed": len(jieba_chapters),
+                            "triples": jieba_triples,
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
     all_triples = rule_triples + jieba_triples
     counter = Counter(all_triples)
     data = {
         "total_triples": len(all_triples),
         "rule_based": len(rule_triples),
         "jieba_based": len(jieba_triples),
+        "jieba_enabled": use_jieba,
+        "jieba_backend": JIEBA_BACKEND if use_jieba else None,
+        "jieba_chapters_analyzed": len(jieba_chapters) if use_jieba else 0,
+        "jieba_chapter_limit": jieba_chapter_limit,
+        "jieba_cache_path": str(jieba_cache_path) if jieba_cache_path else None,
+        "jieba_cache_hit": jieba_cache_hit,
         "top_relations": [
             {"subject": s, "relation": r, "object": o, "count": c}
             for (s, r, o), c in counter.most_common(60)

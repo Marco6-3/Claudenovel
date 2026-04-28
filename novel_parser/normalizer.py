@@ -118,7 +118,11 @@ ENTITY_ALIASES: dict[str, list[str]] = {
 def read_text(path: Path) -> str:
     """Read text with auto-encoding detection."""
     raw = path.read_bytes()
-    for enc in ("utf-16", "utf-8-sig", "utf-8", "gb18030", "big5"):
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return raw.decode("utf-16")
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw.decode("utf-8-sig")
+    for enc in ("utf-8", "gb18030", "big5", "utf-16"):
         try:
             return raw.decode(enc)
         except UnicodeDecodeError:
