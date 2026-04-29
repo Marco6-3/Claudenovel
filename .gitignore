@@ -1,4 +1,6 @@
 __pycache__/
+.env
+.env.*
 *.pyc
 *.pyo
 *.pyd
@@ -10,4 +12,5 @@ dist/
 build/
 novel_analysis_enhanced/
 novel_analysis/
+novel_analysis_comparison/
 *.cache
