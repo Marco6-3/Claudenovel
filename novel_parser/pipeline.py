@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from . import context_builder, entity, evaluator, llm_client, normalizer, relation, sentiment, structure
+from . import common_workflows, context_builder, entity, evaluator, llm_client, normalizer, relation, sentiment, structure
 
 
 def run_pipeline(
@@ -25,19 +25,27 @@ def run_pipeline(
     context_max_items: int = 80,
     context_excerpt_chars: int = 900,
     context_max_chars: int = 80000,
+    common_workflow: bool = False,
+    source_start: Optional[int] = None,
+    source_end: Optional[int] = None,
+    source_max_chars: int = 0,
+    apply_aliases: bool = True,
 ) -> dict:
     """Run the full enhanced analysis pipeline."""
     out_dir.mkdir(exist_ok=True)
 
     # 1. Read & normalize
     raw_text = normalizer.read_text(txt_path)
-    text = normalizer.normalize_text(raw_text)
+    raw_structure_text = raw_text.replace("\r\n", "\n").replace("\r", "\n")
+    text = normalizer.normalize_text(raw_text, apply_aliases=apply_aliases)
 
     # 2. Structural parsing
+    raw_chapters: List[structure.Chapter] = structure.parse_chapters(raw_structure_text)
     chapters: List[structure.Chapter] = structure.parse_chapters(text)
+    aliases = entity.discover_entity_aliases(chapters, include_builtin_present=apply_aliases)
 
     # 3. Entity stats (with aliases merged + scene-level cooccurrence)
-    stats = entity.compute_entity_stats(chapters)
+    stats = entity.compute_entity_stats(chapters, aliases=aliases)
     entity.export_entity_stats(stats, out_dir)
 
     # 4. Relation triples
@@ -47,6 +55,7 @@ def run_pipeline(
         use_jieba=use_jieba,
         jieba_chapter_limit=jieba_chapter_limit,
         jieba_cache_path=(out_dir / "jieba_relation_cache.json") if use_jieba_cache else None,
+        aliases=aliases,
     )
 
     # 5. Sentiment arc
@@ -90,6 +99,7 @@ def run_pipeline(
     evaluation_output = None
     llm_status = "not_requested"
     context_output = None
+    common_output = None
     if evaluate_chapter is not None:
         if evaluate_chapter < 1 or evaluate_chapter > len(chapters):
             raise ValueError(
@@ -149,6 +159,19 @@ def run_pipeline(
             max_context_chars=context_max_chars,
         )
 
+    if common_workflow:
+        common_output = common_workflows.export_common_workflows(
+            raw_chapters,
+            out_dir,
+            query=context_query,
+            focus_entities=focus_entities or [],
+            source_start=source_start,
+            source_end=source_end,
+            source_max_chars=source_max_chars,
+            evidence_max_items=max(context_max_items, 120),
+            evidence_excerpt_chars=max(context_excerpt_chars, 1200),
+        )
+
     return {
         "file": txt_path.name,
         "chars": len(text),
@@ -160,6 +183,7 @@ def run_pipeline(
         "jieba_cache_enabled": use_jieba_cache,
         "evaluation_output": evaluation_output,
         "context_output": context_output,
+        "common_output": common_output,
         "llm_report_requested": llm_report,
         "llm_status": llm_status,
         "outputs": [p.name for p in out_dir.iterdir()],

@@ -40,6 +40,12 @@ def main() -> None:
         help="Output directory. Defaults to novel_analysis_enhanced.",
     )
     parser.add_argument(
+        "--txt-path",
+        type=Path,
+        default=TXT,
+        help="Novel text path. Defaults to the first .txt file in this directory.",
+    )
+    parser.add_argument(
         "--evaluate-chapter",
         type=int,
         default=None,
@@ -101,10 +107,53 @@ def main() -> None:
         default=80000,
         help="Rough character budget for the generated prompt evidence section.",
     )
+    parser.add_argument(
+        "--llm-context-report",
+        action="store_true",
+        help="Call the configured LLM with a generated or existing evidence context prompt.",
+    )
+    parser.add_argument(
+        "--common-workflow",
+        action="store_true",
+        help=(
+            "Export common files: detailed original-text LLM pack, review evidence, "
+            "and review/improve/continuation prompt."
+        ),
+    )
+    parser.add_argument(
+        "--source-start",
+        type=int,
+        default=None,
+        help="First chapter included in the detailed original-text source pack.",
+    )
+    parser.add_argument(
+        "--source-end",
+        type=int,
+        default=None,
+        help="Last chapter included in the detailed original-text source pack.",
+    )
+    parser.add_argument(
+        "--source-max-chars",
+        type=int,
+        default=0,
+        help="Rough character budget for the detailed source pack. 0 means no budget limit.",
+    )
+    parser.add_argument(
+        "--context-prompt",
+        type=Path,
+        default=None,
+        help="Existing llm_context_prompt.md path to send to the configured LLM.",
+    )
+    parser.add_argument(
+        "--llm-output-name",
+        default="llm_context_report.md",
+        help="Output filename for --llm-context-report.",
+    )
     args = parser.parse_args()
+    apply_aliases = args.txt_path.resolve() == TXT.resolve()
 
     result = run_pipeline(
-        TXT,
+        args.txt_path,
         args.out_dir,
         use_jieba=args.use_jieba,
         jieba_chapter_limit=args.jieba_chapter_limit,
@@ -120,7 +169,25 @@ def main() -> None:
         context_max_items=args.context_max_items,
         context_excerpt_chars=args.context_excerpt_chars,
         context_max_chars=args.context_max_chars,
+        common_workflow=args.common_workflow,
+        source_start=args.source_start,
+        source_end=args.source_end,
+        source_max_chars=args.source_max_chars,
+        apply_aliases=apply_aliases,
     )
+    if args.llm_context_report:
+        from novel_parser import llm_client
+
+        prompt_path = args.context_prompt or (args.out_dir / "llm_context_prompt.md")
+        prompt_text = prompt_path.read_text(encoding="utf-8")
+        content, model = llm_client.generate_context_report(prompt_text)
+        out_path = args.out_dir / args.llm_output_name
+        out_path.write_text(
+            f"# LLM 证据化分析报告\n\n> 模型：{model}\n> 输入提示词：{prompt_path}\n\n{content}\n",
+            encoding="utf-8",
+        )
+        result["llm_context_report"] = str(out_path)
+        result["llm_context_model"] = model
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

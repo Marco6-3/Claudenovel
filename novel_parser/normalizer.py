@@ -1,6 +1,7 @@
 """Text normalization: encoding, alias resolution."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -138,12 +139,18 @@ def normalize_aliases(text: str) -> str:
             replacements.append((alias, canonical))
     replacements.sort(key=lambda x: len(x[0]), reverse=True)
     for old, new in replacements:
+        if new.endswith(old):
+            prefix = new[: -len(old)]
+            if prefix:
+                text = re.sub(rf"(?<!{re.escape(prefix)}){re.escape(old)}", new, text)
+                continue
         text = text.replace(old, new)
     return text
 
 
-def normalize_text(text: str) -> str:
+def normalize_text(text: str, apply_aliases: bool = True) -> str:
     """Full normalization pipeline."""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = normalize_aliases(text)
+    if apply_aliases:
+        text = normalize_aliases(text)
     return text

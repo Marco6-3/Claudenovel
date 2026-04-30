@@ -5,12 +5,12 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .normalizer import ENTITY_ALIASES
 from .structure import Chapter
 
-CANONICAL_NAMES = set(ENTITY_ALIASES.keys())
+CANONICAL_NAMES: Set[str] = set(ENTITY_ALIASES.keys())
 JIEBA_BACKEND = "unavailable"
 
 RELATION_VERBS: Dict[str, str] = {
@@ -33,16 +33,33 @@ RELATION_VERBS: Dict[str, str] = {
 }
 
 
-def _extract_entities_in_window(text: str, center: int, radius: int = 40) -> List[str]:
+def _extract_entities_in_window(
+    text: str, center: int, radius: int = 40, names: Optional[Set[str]] = None,
+) -> List[str]:
+    if names is None:
+        names = CANONICAL_NAMES
     start = max(0, center - radius)
     end = min(len(text), center + radius)
     window = text[start:end]
-    found = [name for name in CANONICAL_NAMES if name in window]
+    found = sorted(
+        (name for name in names if name in window),
+        key=lambda name: window.find(name),
+    )
     return found
 
 
-def extract_relations_rule(chapters: List[Chapter]) -> List[Tuple[str, str, str]]:
-    """Extract (subject, relation, object) by pattern matching around relation verbs."""
+def extract_relations_rule(
+    chapters: List[Chapter],
+    aliases: Optional[Dict[str, List[str]]] = None,
+) -> List[Tuple[str, str, str]]:
+    """Extract (subject, relation, object) by pattern matching around relation verbs.
+
+    Args:
+        chapters: Parsed chapter list.
+        aliases: Optional dict of {canonical_name: [aliases]}.
+                 If None, uses the built-in ENTITY_ALIASES.
+    """
+    names = set(aliases.keys()) if aliases is not None else CANONICAL_NAMES
     triples = []
     verb_pattern = re.compile(
         "(" + "|".join(map(re.escape, RELATION_VERBS.keys())) + ")"
@@ -51,16 +68,55 @@ def extract_relations_rule(chapters: List[Chapter]) -> List[Tuple[str, str, str]
         for m in verb_pattern.finditer(ch.body):
             verb = m.group(0)
             rel_type = RELATION_VERBS[verb]
-            nearby = _extract_entities_in_window(ch.body, m.start(), 60)
+            nearby = _extract_entities_in_window(ch.body, m.start(), 60, names)
             if len(nearby) >= 2:
                 triples.append((nearby[0], rel_type, nearby[1]))
     return triples
 
 
-def extract_relations_jieba(chapters: List[Chapter]) -> List[Tuple[str, str, str]]:
+def extract_relation_events_rule(
+    chapters: List[Chapter],
+    aliases: Optional[Dict[str, List[str]]] = None,
+    window_radius: int = 60,
+) -> List[Dict[str, Any]]:
+    """Extract relation events with chapter and paragraph evidence metadata."""
+    names = set(aliases.keys()) if aliases is not None else CANONICAL_NAMES
+    events: List[Dict[str, Any]] = []
+    verb_pattern = re.compile(
+        "(" + "|".join(map(re.escape, RELATION_VERBS.keys())) + ")"
+    )
+    for ch in chapters:
+        for paragraph_index, paragraph in enumerate(ch.paragraphs, start=1):
+            for m in verb_pattern.finditer(paragraph):
+                verb = m.group(0)
+                rel_type = RELATION_VERBS[verb]
+                nearby = _extract_entities_in_window(paragraph, m.start(), window_radius, names)
+                if len(nearby) < 2:
+                    continue
+                subject, obj = nearby[0], nearby[1]
+                events.append({
+                    "subject": subject,
+                    "relation": rel_type,
+                    "object": obj,
+                    "chapter": ch.global_index,
+                    "chapter_title": ch.title,
+                    "paragraph": paragraph_index,
+                    "evidence_id": f"CH{ch.global_index:03d}-P{paragraph_index:03d}",
+                    "verb": verb,
+                    "excerpt": paragraph[:240],
+                })
+    return events
+
+
+def extract_relations_jieba(
+    chapters: List[Chapter],
+    aliases: Optional[Dict[str, List[str]]] = None,
+) -> List[Tuple[str, str, str]]:
     """Jieba-enhanced: one POS-tag pass per chapter, then scan (nr, verb, nr) patterns.
     Much faster than per-window tagging (~30-60s for 1.3M chars total)."""
     global JIEBA_BACKEND
+    names = set(aliases.keys()) if aliases is not None else CANONICAL_NAMES
+
     try:
         import jieba_fast as jieba
         import jieba_fast.posseg as pseg
@@ -76,7 +132,7 @@ def extract_relations_jieba(chapters: List[Chapter]) -> List[Tuple[str, str, str
             JIEBA_BACKEND = "unavailable"
             return []
 
-    for name in CANONICAL_NAMES:
+    for name in names:
         jieba.add_word(name, tag="nr")
 
     triples = []
@@ -87,14 +143,14 @@ def extract_relations_jieba(chapters: List[Chapter]) -> List[Tuple[str, str, str
         i = 0
         while i < len(words):
             w = words[i]
-            if w.flag == "nr" and w.word in CANONICAL_NAMES:
+            if w.flag == "nr" and w.word in names:
                 # look forward for a verb then another nr within next 12 words
                 for j in range(i + 1, min(i + 12, len(words))):
                     mid = words[j]
                     if mid.word in verb_set and mid.flag.startswith("v"):
                         for k in range(j + 1, min(j + 8, len(words))):
                             end_w = words[k]
-                            if end_w.flag == "nr" and end_w.word in CANONICAL_NAMES:
+                            if end_w.flag == "nr" and end_w.word in names:
                                 triples.append((w.word, RELATION_VERBS[mid.word], end_w.word))
                                 i = k  # advance to avoid duplicate overlap
                                 break
@@ -109,9 +165,10 @@ def export_relations(
     use_jieba: bool = False,
     jieba_chapter_limit: Optional[int] = None,
     jieba_cache_path: Optional[Path] = None,
+    aliases: Optional[Dict[str, List[str]]] = None,
 ) -> None:
     out_dir.mkdir(exist_ok=True)
-    rule_triples = extract_relations_rule(chapters)
+    rule_triples = extract_relations_rule(chapters, aliases=aliases)
     jieba_chapters = chapters
     if jieba_chapter_limit is not None:
         jieba_chapters = chapters[:max(0, jieba_chapter_limit)]
@@ -123,7 +180,7 @@ def export_relations(
             jieba_triples = [tuple(item) for item in cached.get("triples", [])]
             jieba_cache_hit = True
         else:
-            jieba_triples = extract_relations_jieba(jieba_chapters)
+            jieba_triples = extract_relations_jieba(jieba_chapters, aliases=aliases)
             if jieba_cache_path:
                 jieba_cache_path.parent.mkdir(exist_ok=True)
                 jieba_cache_path.write_text(

@@ -9,6 +9,9 @@ from typing import List
 
 # Scene markers: location keywords that indicate a setting change.
 SCENE_MARKERS = [
+    "教室", "食堂", "宿舍", "学校", "校园", "校医室", "办公室", "医院",
+    "古玩街", "荒地", "雨夜", "华山", "面馆", "活墓", "冥界", "地府",
+    "森罗殿", "灵异局", "京海", "房间", "街道", "山上", "山下",
     "宿舍", "教室", "食堂", "图书馆", "校园", "学校", "大学",
     "地府", "酆都", "阴间", "冥界", "黄泉", "奈何桥", "阎王殿",
     "公司", "办公室", "会议室", "工地", "会所", "酒吧", "餐厅",
@@ -19,10 +22,14 @@ SCENE_MARKERS = [
     "微信群", "手机", "红包", "直播间",
 ]
 
-CHAP_PAT = re.compile(r"(?m)^(第[\u4e00-\u9fff0-9]+章\s+[^\n\r]+)\s*$")
-VOL_PAT = re.compile(r"(?m)^(第[\u4e00-\u9fff0-9]+卷\s+[^\n\r]+)\s*$")
+CHAP_PAT = re.compile(
+    r"(?m)^(第[\u4e00-\u9fff〇零一二两三四五六七八九十百千万0-9]+\s*章\s*[^\n\r]*)\s*$"
+)
+VOL_PAT = re.compile(
+    r"(?m)^(第[\u4e00-\u9fff〇零一二两三四五六七八九十百千万0-9]+\s*卷\s*[^\n\r]*)\s*$"
+)
 # Chinese quotes: 「」 or "" or ''
-QUOTE_PAT = re.compile(r"[「\"']([^「\"'」\"']{1,300})[」\"']")
+QUOTE_PAT = re.compile(r"[“”‘’「」\"']([^“”‘’「」\"']{1,300})[“”‘’「」\"']")
 # Narrative markers for speaker attribution
 SPEAKER_CUES = re.compile(r"([\u4e00-\u9fff]{2,8})(?:说|道|喊|叫|问|答|冷笑|哼|叹|道|说道)")
 
