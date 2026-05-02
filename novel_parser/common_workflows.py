@@ -15,50 +15,6 @@ DEFAULT_REVIEW_QUERY = (
     "请评价这段剧情的优缺点，指出可改进处，并给出后续剧情发展建议。"
 )
 
-REVISION_REPORT_SCHEMA = {
-    "report_title": "章节级编辑诊断报告",
-    "overall_judgment": {
-        "verdict": "一句话判断当前稿件最大价值和最大风险",
-        "scores": {
-            "plot": "1-10",
-            "character": "1-10",
-            "prose": "1-10",
-            "pacing": "1-10",
-            "rewrite_priority": "A/B/C",
-        },
-        "evidence_refs": ["CH001-P003"],
-    },
-    "rewrite_targets": [
-        {
-            "priority": "P0/P1/P2",
-            "chapter_range": "CH001-CH003",
-            "problem": "必须具体到事件、行为、台词或叙事处理",
-            "why_it_hurts": "说明它如何伤害读者代入、爽点、人物可信度或后续改写",
-            "evidence_refs": ["CH001-P003", "CH002-P010"],
-            "rewrite_action": "直接写成改写任务，而不是抽象建议",
-            "scene_patch": {
-                "location": "建议插入或重写的位置",
-                "target_words": "预计增删字数",
-                "must_keep": ["不可删除的原情节点"],
-                "must_change": ["必须改变的行为/台词/信息"],
-            },
-            "expected_effect": "改完后应产生的阅读效果",
-        }
-    ],
-    "continuation_routes": [
-        {
-            "route_name": "后续路线名称",
-            "next_chapter_hook": "下一章可直接使用的钩子",
-            "conflict_core": "冲突核心",
-            "character_movement": "人物关系或人物弧光推进",
-            "foreshadowing_to_reuse": ["CH001-P003"],
-            "risk": "这样写的风险",
-            "recommended_execution": "推荐写法",
-        }
-    ],
-}
-
-
 def _select_chapters(
     chapters: Sequence[Chapter],
     start: int | None = None,
@@ -218,7 +174,6 @@ def render_editorial_revision_prompt(
 ) -> str:
     """Build a sharper prompt for rewrite-ready editorial diagnosis."""
     focus = "、".join(focus_entities or []) or "未指定"
-    schema = json.dumps(REVISION_REPORT_SCHEMA, ensure_ascii=False, indent=2)
     return f"""# 深度编辑诊断与改写规格提示词
 
 你是一名严厉但务实的中文网文主编。你的任务不是写读后感，而是输出可直接喂给章节改写器的编辑诊断报告。
@@ -293,16 +248,6 @@ def render_editorial_revision_prompt(
 - 风险
 - 推荐写法
 - 下一章钩子
-
-## 结构化摘要
-
-最后输出一个 fenced code block，语言标记为 `json`，内容必须符合下面 schema。这个 JSON 供 `feat/chapter-rewriter` 后续读取：
-
-JSON 中 `rewrite_targets` 至少 5 条，`continuation_routes` 必须正好 5 条；少于 5 条视为不合格，需要重新输出。
-
-```json
-{schema}
-```
 
 ## 证据包
 """
@@ -398,19 +343,12 @@ def export_common_workflows(
         encoding="utf-8",
     )
 
-    rewriter_contract_path = out_dir / "chapter_rewriter_report_schema.json"
-    rewriter_contract_path.write_text(
-        json.dumps(REVISION_REPORT_SCHEMA, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
     return {
         "source_pack": source_path.name,
         "source_manifest": manifest_path.name,
         "review_evidence_pack": evidence_path.name,
         "review_prompt": prompt_path.name,
         "editorial_revision_prompt": editorial_prompt_path.name,
-        "chapter_rewriter_report_schema": rewriter_contract_path.name,
         "source_chapter_count": source_manifest["chapter_count"],
         "source_truncated_by_budget": source_manifest["truncated_by_budget"],
         "review_evidence_count": len(evidence),

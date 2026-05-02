@@ -69,7 +69,7 @@ agent 应默认执行完整分析闭环，而不是只给聊天建议：
 2. 必要时把 `.docx` 转成 UTF-8 `.txt`。
 3. 跑 `--common-workflow` 生成原文包、证据包、RAG/记忆资料和新版编辑诊断提示词。
 4. 用 `editorial_revision_prompt.md` 调用 LLM 生成深度编辑报告。
-5. 验收报告是否包含 P0/P1/P2、逐章改写清单、后续路线和 JSON 摘要。
+5. 验收报告是否包含 P0/P1/P2、逐章改写清单和后续路线。
 6. 最后只向用户报告核心结论和产物路径，不要把大段报告全文塞进聊天。
 
 ### 输入要求
@@ -102,7 +102,6 @@ python analyze_enhanced.py `
 - `llm_source_pack_detailed.md`：保留原文段落和 `[CHxxx-Pxxx]` 证据编号。
 - `review_evidence_pack.json`：筛选出的证据包。
 - `editorial_revision_prompt.md`：新版深度编辑诊断提示词，优先使用这个文件。
-- `chapter_rewriter_report_schema.json`：给后续章节改写器使用的结构化报告契约。
 - `entity_stats.json`、`relation_triples.json`、`sentiment_arc.json`、`enhanced_briefs.json`：人物、关系、情绪和章节索引资料，可作为 RAG/记忆材料。
 
 ### 可选：生成 RAG 索引和记忆摘要
@@ -146,7 +145,7 @@ python analyze_enhanced.py `
 - 每个核心问题引用至少 2 个 `[CHxxx-Pxxx]` 证据编号。
 - 有“逐章改写清单”，明确章节/段落、改写动作、目标字数变化、给改写器的指令。
 - 有 5 条后续剧情路线，每条包含证据、风险、推荐写法和下一章钩子；短篇或单章也必须给满 5 条。
-- 末尾有可解析的 ```json 结构化摘要，包含 `rewrite_targets` 和 `continuation_routes`；`rewrite_targets` 至少 5 条，`continuation_routes` 必须正好 5 条。
+- 报告末尾不应附加 JSON 或结构化摘要；这份文件是给人读的深度分析和预测报告。
 
 如果报告只有人物统计、情绪曲线和笼统建议，说明走错了旧流程；应改用 `editorial_revision_prompt.md` 重新调用 LLM。
 
