@@ -15,7 +15,6 @@ DEFAULT_REVIEW_QUERY = (
     "请评价这段剧情的优缺点，指出可改进处，并给出后续剧情发展建议。"
 )
 
-
 def _select_chapters(
     chapters: Sequence[Chapter],
     start: int | None = None,
@@ -166,6 +165,94 @@ def render_review_prompt(
 """
 
 
+def render_editorial_revision_prompt(
+    query: str,
+    evidence_count: int,
+    focus_entities: Sequence[str] | None = None,
+    source_pack_name: str = "llm_source_pack_detailed.md",
+    evidence_pack_name: str = "review_evidence_pack.json",
+) -> str:
+    """Build a sharper prompt for rewrite-ready editorial diagnosis."""
+    focus = "、".join(focus_entities or []) or "未指定"
+    return f"""# 深度编辑诊断与改写规格提示词
+
+你是一名严厉但务实的中文网文主编。你的任务不是写读后感，而是输出可直接喂给章节改写器的编辑诊断报告。
+
+## 分析目标
+
+{query or DEFAULT_REVIEW_QUERY}
+
+关注对象：{focus}
+证据数量：{evidence_count}
+原文输入包：`{source_pack_name}`
+证据包：`{evidence_pack_name}`
+
+## 总原则
+
+1. 只基于给定原文和证据编号判断。没有证据就写“证据不足”，不要顺着设想编造。
+2. 报告要具体、尖锐、可直接改章节。避免“加强人物”“优化节奏”“增加冲突”这类空话。
+3. 每个核心问题至少引用 2 个证据编号，例如 `[CH035-P001]`、`[CH044-P001]`。
+4. 每个修改建议必须写清：改哪一章/哪一段、加什么场景、删什么信息、调整哪句台词或哪种行为、预计增删多少字。
+5. 区分“必须修”“建议增强”“可以保留但要控制”。不要平均用力。
+6. 如果统计数据和原文感觉冲突，以原文证据为准；统计数据只能作为辅助论据。
+7. 后续剧情建议必须从已有伏笔推出，不能凭空新增大设定。
+
+## 输出格式
+
+请严格按以下结构输出 Markdown：
+
+# 编辑诊断报告
+
+## 一句话结论
+
+用 2-4 句话判断：当前稿件最强的阅读价值是什么，最影响后续改写的硬伤是什么。
+
+## 评分总览
+
+用表格给出剧情、人物、文笔、节奏、爽点、改写优先级。每项必须有 1-2 个证据编号。
+
+## 必须修（P0）
+
+列出 3-5 条。每条必须包含：
+
+- 问题描述：具体到章节事件、人物行为、台词或叙事处理。
+- 证据支持：至少 2 个证据编号。
+- 为什么伤害阅读：说明影响的是人物可信度、爽点、节奏、情绪、设定还是后续剧情。
+- 改写任务：写成 `feat/chapter-rewriter` 可以执行的任务。
+- 场景补丁：明确插入/重写位置、目标字数、必须保留、必须改变。
+
+## 建议增强（P1）
+
+列出 3-5 条。要求同上，但可以是增强代入感、伏笔密度、人物互动、战斗策略等。
+
+## 保留但控制（P2）
+
+列出 2-4 条。说明哪些优点继续使用会变成套路，以及控制边界。
+
+## 逐章改写清单
+
+用表格输出，字段固定为：
+
+| 优先级 | 章节/段落 | 改写动作 | 目标字数变化 | 依赖证据 | 给改写器的指令 |
+
+`给改写器的指令` 必须是一句可执行命令，例如：
+“在 CH035 突破前新增 500-800 字失败冲关场景，保留轮回珠提纯设定，但加入灵气逆行和凌默主动调整的过程。”
+
+## 后续剧情路线
+
+必须给满 5 条路线，即使当前输入只是短篇片段或单章开头，也要基于已有伏笔给出 5 个不同方向。不要只给 2-3 条。每条包含：
+
+- 预测内容
+- 证据依据
+- 可信度
+- 风险
+- 推荐写法
+- 下一章钩子
+
+## 证据包
+"""
+
+
 def export_common_workflows(
     chapters: Sequence[Chapter],
     out_dir: Path,
@@ -233,11 +320,35 @@ def export_common_workflows(
         encoding="utf-8",
     )
 
+    editorial_prompt_path = out_dir / "editorial_revision_prompt.md"
+    evidence_markdown = "\n".join(
+        (
+            f"### [{item.id}] {item.chapter_title}\n"
+            f"- 位置：第 {item.chapter_index} 章，第 {item.paragraph_index} 段\n"
+            f"- 命中：{'、'.join(item.matched_terms) if item.matched_terms else '无'}\n"
+            f"- 原文摘录：{item.excerpt}\n"
+        )
+        for item in evidence
+    )
+    editorial_prompt_path.write_text(
+        render_editorial_revision_prompt(
+            query or DEFAULT_REVIEW_QUERY,
+            len(evidence),
+            focus_entities,
+            source_pack_name=source_path.name,
+            evidence_pack_name=evidence_path.name,
+        )
+        + "\n\n"
+        + evidence_markdown,
+        encoding="utf-8",
+    )
+
     return {
         "source_pack": source_path.name,
         "source_manifest": manifest_path.name,
         "review_evidence_pack": evidence_path.name,
         "review_prompt": prompt_path.name,
+        "editorial_revision_prompt": editorial_prompt_path.name,
         "source_chapter_count": source_manifest["chapter_count"],
         "source_truncated_by_budget": source_manifest["truncated_by_budget"],
         "review_evidence_count": len(evidence),
