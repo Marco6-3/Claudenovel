@@ -285,7 +285,7 @@ def render_editorial_revision_prompt(
 
 ## 后续剧情路线
 
-给 5 条路线。每条包含：
+必须给满 5 条路线，即使当前输入只是短篇片段或单章开头，也要基于已有伏笔给出 5 个不同方向。不要只给 2-3 条。每条包含：
 
 - 预测内容
 - 证据依据
@@ -297,6 +297,8 @@ def render_editorial_revision_prompt(
 ## 结构化摘要
 
 最后输出一个 fenced code block，语言标记为 `json`，内容必须符合下面 schema。这个 JSON 供 `feat/chapter-rewriter` 后续读取：
+
+JSON 中 `rewrite_targets` 至少 5 条，`continuation_routes` 必须正好 5 条；少于 5 条视为不合格，需要重新输出。
 
 ```json
 {schema}

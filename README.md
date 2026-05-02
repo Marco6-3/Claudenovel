@@ -49,6 +49,107 @@ python analyze_enhanced.py `
 
 这个流程不是把全文无差别塞进上下文，而是先按查询目标和关注人物筛选高信号段落，再让 LLM 基于证据分析。
 
+## Agent 调用指南：分析新小说片段并生成可改写报告
+
+当另一个 agent 需要分析用户给的新小说或小说片段时，优先走这一节。目标不是生成泛泛读后感，而是生成**具体、尖锐、可直接改章节**的编辑诊断报告，供后续 `feat/chapter-rewriter` 读取和执行。
+
+### 自然语言触发
+
+如果用户用自然语言说：
+
+- “帮我分析小说”
+- “评价一下这个小说片段”
+- “看看这几章写得怎么样”
+- “给我后续剧情建议”
+- “分析后让后续改写器能接着改”
+
+agent 应默认执行完整分析闭环，而不是只给聊天建议：
+
+1. 识别输入文件（`.txt` / `.docx`）。
+2. 必要时把 `.docx` 转成 UTF-8 `.txt`。
+3. 跑 `--common-workflow` 生成原文包、证据包、RAG/记忆资料和新版编辑诊断提示词。
+4. 用 `editorial_revision_prompt.md` 调用 LLM 生成深度编辑报告。
+5. 验收报告是否包含 P0/P1/P2、逐章改写清单、后续路线和 JSON 摘要。
+6. 最后只向用户报告核心结论和产物路径，不要把大段报告全文塞进聊天。
+
+### 输入要求
+
+- 推荐输入格式：UTF-8 `.txt`。
+- 如果用户给的是 `.docx`，先转换成 `.txt`，再交给框架。不要直接把 `.docx` 路径传给 `--txt-path`。
+- 外部小说必须显式传 `--txt-path`，不要依赖仓库默认 `.txt`。
+- `--focus-entity` 应填写当前小说真实角色名；不知道角色名时可以先不填，或先运行基础分析后查看 `entity_stats.json`。
+
+### 第一步：生成新版编辑诊断提示词
+
+```powershell
+python analyze_enhanced.py `
+  --txt-path "C:\path\to\你的小说.txt" `
+  --out-dir "C:\path\to\输出目录" `
+  --common-workflow `
+  --context-query "评价当前小说片段的优缺点，给出具体、尖锐、可直接改章节的修改建议和后续剧情路线" `
+  --focus-entity "主角名" `
+  --focus-entity "重要角色名" `
+  --source-start 1 `
+  --source-end 20 `
+  --context-max-items 160 `
+  --context-excerpt-chars 1400
+```
+
+如果是短篇或单个片段，`--source-end` 可以设为实际章节数；如果不确定章节数，可以先不填 `--source-start/--source-end`。
+
+关键输出：
+
+- `llm_source_pack_detailed.md`：保留原文段落和 `[CHxxx-Pxxx]` 证据编号。
+- `review_evidence_pack.json`：筛选出的证据包。
+- `editorial_revision_prompt.md`：新版深度编辑诊断提示词，优先使用这个文件。
+- `chapter_rewriter_report_schema.json`：给后续章节改写器使用的结构化报告契约。
+- `entity_stats.json`、`relation_triples.json`、`sentiment_arc.json`、`enhanced_briefs.json`：人物、关系、情绪和章节索引资料，可作为 RAG/记忆材料。
+
+### 可选：生成 RAG 索引和记忆摘要
+
+如果用户提到“RAG”“资料库”“后续持续分析”“给别的 agent 用”，再运行：
+
+```powershell
+python index_and_query_rag.py `
+  --txt-path "C:\path\to\你的小说.txt" `
+  --out-dir "C:\path\to\输出目录" `
+  --index
+```
+
+如果只是先生成轻量记忆摘要：
+
+```powershell
+python index_and_query_rag.py `
+  --txt-path "C:\path\to\你的小说.txt" `
+  --out-dir "C:\path\to\输出目录" `
+  --memory-only
+```
+
+RAG/记忆相关输出通常包括 `memory_summary.json` 和向量/检索索引文件。后续 agent 应优先读取这些文件，而不是重新猜测前文。
+
+### 第二步：调用 LLM 生成深度编辑报告
+
+如果 `.env` 或环境变量已配置 DeepSeek / OpenAI 兼容接口，直接调用框架：
+
+```powershell
+python analyze_enhanced.py `
+  --txt-path "C:\path\to\你的小说.txt" `
+  --out-dir "C:\path\to\输出目录" `
+  --llm-context-report `
+  --context-prompt "C:\path\to\输出目录\editorial_revision_prompt.md" `
+  --llm-output-name "editorial_revision_report.md"
+```
+
+合格报告应至少满足：
+
+- 有 `必须修（P0）`、`建议增强（P1）`、`保留但控制（P2）`。
+- 每个核心问题引用至少 2 个 `[CHxxx-Pxxx]` 证据编号。
+- 有“逐章改写清单”，明确章节/段落、改写动作、目标字数变化、给改写器的指令。
+- 有 5 条后续剧情路线，每条包含证据、风险、推荐写法和下一章钩子；短篇或单章也必须给满 5 条。
+- 末尾有可解析的 ```json 结构化摘要，包含 `rewrite_targets` 和 `continuation_routes`；`rewrite_targets` 至少 5 条，`continuation_routes` 必须正好 5 条。
+
+如果报告只有人物统计、情绪曲线和笼统建议，说明走错了旧流程；应改用 `editorial_revision_prompt.md` 重新调用 LLM。
+
 ## 常用工作流：原文整理 + 评价改进 + 后续剧情
 
 如果目标是把原文整理成适合 LLM 深度分析的格式，并同时生成“评价、改进、后续剧情发展建议”的提示词，使用：
