@@ -8,6 +8,10 @@ Evidence-grounded novel analysis framework. Parses Chinese web novels into struc
 
 Core philosophy: every analysis conclusion must cite evidence IDs like `[CH035-P001]` (chapter 35, paragraph 1). No evidence = "证据不足".
 
+## Rules
+
+- **New feature = new branch.** Never commit feature code directly to `main`. Create a branch (`feat/description`), develop there, then merge to `main` when ready.
+
 ## Commands
 
 ```powershell
