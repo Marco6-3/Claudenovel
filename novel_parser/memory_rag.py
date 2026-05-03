@@ -71,6 +71,10 @@ def get_embeddings(texts: List[str], model: str = "") -> np.ndarray:
     if not texts:
         return np.zeros((0, 1536), dtype=np.float32)
 
+    # Load .env so embedding works from any subfolder (not just the project root)
+    from .llm_client import load_dotenv
+    load_dotenv()
+
     api_key = _env("OPENAI_API_KEY", _env("DEEPSEEK_API_KEY"))
     base_url = _env("OPENAI_BASE_URL", _env("DEEPSEEK_BASE_URL", "")).rstrip("/")
 
