@@ -196,3 +196,109 @@ def build_rewrite_user_prompt(
     ])
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Continuation: generate next chapter from editorial report route
+# ---------------------------------------------------------------------------
+CONTINUATION_SYSTEM_PROMPT = """你是一名中文网络小说作者，正在根据编辑的诊断报告续写下一章。
+
+核心约束：
+1. 严格按选定的剧情路线推进，不要自由发挥偏离路线。
+2. 保留原文风格、人物语气、叙事节奏。以上方最近章节为风格参考，模仿其句式、节奏和对白风格。
+3. 承接前文记忆：人物当前状态、关系进展、未解钩子必须与前文一致。
+4. 按目标字数写作（±20%），不要偷工减料也不要灌水。
+5. 章节标题放在第一行，正文紧跟其后。
+6. 输出纯文本，不要加任何解释、注释、Markdown标记、章节编号以外的格式。
+7. 回避编辑报告中指出的P0问题同类错误。
+
+禁止行为：
+- 不要重复前文已发生的情节（以上方最近章节为界，之前的不要再写）
+- 不要编造与世界观矛盾的新设定
+- 不要跳过路线中指定的冲突核心
+- 不要让人物做出与前文弧光矛盾的行为
+"""
+
+
+def build_continuation_user_prompt(
+    route: Dict[str, Any],
+    style_reference: str,
+    memory_summary: Dict[str, Any],
+    p0_issues: List[Dict[str, Any]],
+    target_chapter_num: int,
+    target_words: int = 3000,
+) -> str:
+    """Build user prompt for continuation chapter generation."""
+    lines = []
+
+    # --- Route info ---
+    lines.append(f"# 续写任务：第{target_chapter_num}章\n")
+    lines.append("## 选定剧情路线\n")
+    route_name = route.get("route_name", "未命名路线")
+    lines.append(f"**路线名称**：{route_name}\n")
+
+    if route.get("next_chapter_hook"):
+        lines.append(f"**下一章钩子**：{route['next_chapter_hook']}")
+    if route.get("conflict_core"):
+        lines.append(f"**冲突核心**：{route['conflict_core']}")
+    if route.get("character_movement"):
+        lines.append(f"**人物推进**：{route['character_movement']}")
+    if route.get("recommended_execution"):
+        lines.append(f"**推荐写法**：{route['recommended_execution']}")
+    if route.get("risk"):
+        lines.append(f"**风险提示**：{route['risk']}")
+
+    foreshadowing = route.get("foreshadowing_to_reuse", [])
+    if foreshadowing:
+        lines.append(f"\n**需回收伏笔**：{', '.join(foreshadowing)}")
+
+    lines.append(f"\n**目标字数**：{target_words}字（±20%）")
+
+    # --- P0 issues to avoid ---
+    if p0_issues:
+        lines.append("\n---\n")
+        lines.append("## 必须回避的P0问题（编辑报告指出的硬伤）\n")
+        for i, issue in enumerate(p0_issues, 1):
+            problem = issue.get("problem", "")
+            why = issue.get("why_it_hurts", "")
+            if problem:
+                lines.append(f"{i}. **问题**：{problem}")
+            if why:
+                lines.append(f"   **伤害**：{why}")
+
+    # --- Memory constraints ---
+    lines.append("\n---\n")
+    lines.append("## 前文记忆（必须遵守的设定约束）\n")
+
+    hooks = memory_summary.get("unsolved_hooks", [])
+    if hooks:
+        lines.append("**未解钩子**（本章可铺垫但不可解决，除非路线明确要求）：")
+        for h in hooks[:5]:
+            lines.append(f"- {h}")
+
+    arcs = memory_summary.get("character_arc", {})
+    if arcs:
+        lines.append("\n**人物当前状态**：")
+        for name, desc in list(arcs.items())[:5]:
+            lines.append(f"- {name}：{desc}")
+
+    milestones = memory_summary.get("relation_milestones", [])
+    if milestones:
+        lines.append("\n**关系里程碑**：")
+        for m in milestones[:5]:
+            chapter = m.get("first_seen_chapter") or m.get("first_chapter") or m.get("chapter") or "?"
+            lines.append(f"- 第{chapter}章：{m.get('subject', '')} → {m.get('relation', '')} → {m.get('object', '')}")
+
+    # --- Style reference (last N chapters) ---
+    if style_reference:
+        lines.append("\n---\n")
+        lines.append("## 风格参考（最近章节原文，用于模仿文风）\n")
+        lines.append(style_reference)
+
+    lines.append("\n---\n")
+    lines.append(
+        f"请根据以上剧情路线续写第{target_chapter_num}章。"
+        f"严格按照推荐写法和冲突核心展开，输出纯文本正文。"
+    )
+
+    return "\n".join(lines)
