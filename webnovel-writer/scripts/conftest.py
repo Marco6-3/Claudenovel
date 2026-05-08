@@ -5,6 +5,7 @@ import shutil
 import sqlite3
 import tempfile
 import uuid
+import inspect
 from pathlib import Path
 
 import pytest
@@ -54,13 +55,15 @@ def _install_safe_tempfile() -> None:
 
 class _SafeTemporaryDirectory(_ORIGINAL_TEMPORARY_DIRECTORY):
     def __init__(self, suffix=None, prefix=None, dir=None, ignore_cleanup_errors=True, *, delete=True):
-        super().__init__(
-            suffix=suffix,
-            prefix=prefix,
-            dir=dir,
-            ignore_cleanup_errors=ignore_cleanup_errors,
-            delete=delete,
-        )
+        kwargs = {
+            "suffix": suffix,
+            "prefix": prefix,
+            "dir": dir,
+            "ignore_cleanup_errors": ignore_cleanup_errors,
+        }
+        if "delete" in inspect.signature(_ORIGINAL_TEMPORARY_DIRECTORY).parameters:
+            kwargs["delete"] = delete
+        super().__init__(**kwargs)
 
 
 def _safe_sqlite_connect(*args, **kwargs):

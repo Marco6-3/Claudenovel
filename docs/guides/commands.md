@@ -150,6 +150,39 @@ python -X utf8 "<CLAUDE_PLUGIN_ROOT>/scripts/webnovel.py" --project-root "<PROJE
 | `memory bootstrap` | 从 index.db 与 summaries 回填初始长期记忆 |
 | `memory update` | 对指定章节结果执行手动映射写入 |
 
+### 灵感案例库子命令
+
+灵感案例库用于记录高热度/高讨论度章节或论坛案例的**桥段机制**，供后续 agent 生成原创情节想法。默认只保存来源链接、热度/评分、短摘录、人工笔记和结构化拆解，不保存整章正文。
+
+| 子命令 | 说明 |
+|--------|------|
+| `inspiration add-manual` | 手动添加一个桥段案例 |
+| `inspiration add-file` | 从本地摘录/笔记文件导入案例 |
+| `inspiration add-url` | 从公开网页抓取标题和短摘录后入库 |
+| `inspiration query` | 按目标桥段检索相似案例 |
+| `inspiration brief` | 基于相似案例生成原创化灵感 brief |
+
+示例：
+
+```bash
+python -X utf8 "<CLAUDE_PLUGIN_ROOT>/scripts/webnovel.py" --project-root "<PROJECT_ROOT>" inspiration add-manual \
+  --title "误会跳崖触发上界收徒" \
+  --tags "误会,情感爆点,地图切换,师徒转折" \
+  --heat 98000 \
+  --discussion-count 3200 \
+  --excerpt "女主误会主角背叛，在旧日甜蜜悬崖求死，空间乱流引来上界大能。" \
+  --note "机制：旧甜回刺+短期分离+女主独立升级线。"
+
+python -X utf8 "<CLAUDE_PLUGIN_ROOT>/scripts/webnovel.py" --project-root "<PROJECT_ROOT>" inspiration query \
+  "主角当前地图近乎无敌，如何用误会和女主离开开启上界副本"
+
+python -X utf8 "<CLAUDE_PLUGIN_ROOT>/scripts/webnovel.py" --project-root "<PROJECT_ROOT>" inspiration brief \
+  "生成一个不照搬的上界开副本情节：误会、悬崖、女主拜师、主角短期失败" \
+  --output ".webnovel/tmp/inspiration_brief.md"
+```
+
+产物：`.webnovel/inspiration_library.json`
+
 示例：
 
 ```bash
