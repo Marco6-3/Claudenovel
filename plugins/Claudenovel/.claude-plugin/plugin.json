@@ -1,0 +1,20 @@
+{
+  "name": "claudenovel",
+  "version": "0.1.0",
+  "description": "证据化中文小说分析、编辑诊断、章节改写与续写插件",
+  "author": {
+    "name": "mingzhe Liu"
+  },
+  "homepage": "https://github.com/Marco6-3/Claudenovel",
+  "repository": "https://github.com/Marco6-3/Claudenovel",
+  "license": "UNLICENSED",
+  "keywords": [
+    "novel",
+    "webnovel",
+    "chinese-writing",
+    "editorial-analysis",
+    "continuation",
+    "rag",
+    "deepseek"
+  ]
+}

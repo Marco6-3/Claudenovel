@@ -18,7 +18,7 @@
 ## 二、目录结构
 
 ```
-kimi_lab/
+Claudenovel/
 ├── 入口脚本
 │   ├── analyze_enhanced.py           # 主入口（增强分析流水线）
 │   ├── analyze_novel.py              # 基础分析（legacy，保留兼容）
