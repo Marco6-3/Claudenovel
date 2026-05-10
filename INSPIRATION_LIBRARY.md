@@ -14,7 +14,7 @@
 
 ## 快速开始
 
-在 `kimi_lab` 根目录执行：
+在 `Claudenovel` 根目录执行：
 
 ```powershell
 python -X utf8 .\inspiration_library.py --help

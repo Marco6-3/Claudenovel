@@ -1,4 +1,4 @@
-"""CLI entry point for the kimi_lab inspiration case library."""
+"""CLI entry point for the Claudenovel inspiration case library."""
 from __future__ import annotations
 
 from pathlib import Path

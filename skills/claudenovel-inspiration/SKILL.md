@@ -1,24 +1,24 @@
 ---
-name: kimi-novel-inspiration
+name: claudenovel-inspiration
 description: 采集、拆解和检索高热度网文桥段案例，生成不照搬原文的原创情节灵感 brief。适用于用户说“生成好的情节想法”“学习热门章节套路”“收集论坛/网站高讨论案例”“帮我找类似桥段机制”。
 allowed-tools: Read Bash
 ---
 
-# Kimi Novel Inspiration
+# Claudenovel Inspiration
 
 ## 目标
 
-当用户想让 agent 学习热门小说章节、论坛讨论或评分较高的桥段时，使用 `kimi_lab` 的灵感案例库。核心原则是：**学习机制，不复制正文**。
+当用户想让 agent 学习热门小说章节、论坛讨论或评分较高的桥段时，使用 `Claudenovel` 的灵感案例库。核心原则是：**学习机制，不复制正文**。
 
-这个能力服务于后续写作/改写，不替代 `kimi-novel-analyze`。常见顺序是：
+这个能力服务于后续写作/改写，不替代 `claudenovel-analyze`。常见顺序是：
 
-1. 用 `kimi-novel-analyze` 分析当前小说片段、人物关系和伏笔。
+1. 用 `claudenovel-analyze` 分析当前小说片段、人物关系和伏笔。
 2. 用本 skill 检索或补充相似高热桥段机制。
 3. 生成 `inspiration_brief.md`，交给续写、规划或章节改写 agent。
 
 ## 入口
 
-在 `kimi_lab` 根目录执行：
+在 `Claudenovel` 根目录执行：
 
 ```powershell
 python -X utf8 .\inspiration_library.py --help

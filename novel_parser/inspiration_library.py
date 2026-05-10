@@ -80,7 +80,7 @@ def _fetch_url(url: str, timeout: int = 30) -> tuple[str, str]:
         url,
         headers={
             "User-Agent": (
-                "kimi-lab-inspiration-library/1.0 "
+                "claudenovel-inspiration-library/1.0 "
                 "(stores metadata and short excerpts only)"
             )
         },
