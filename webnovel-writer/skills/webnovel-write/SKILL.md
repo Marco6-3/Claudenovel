@@ -14,15 +14,18 @@ allowed-tools: Read Write Edit Grep Bash Agent
 
 | 模式 | 流程 |
 |------|------|
-| 默认 | Step 1→2→3→4→5→6 |
-| `--fast` | Step 1→2→3(轻量)→4→5→6 |
-| `--minimal` | Step 1→2→4(仅排版)→5→6 |
+| 默认 | Step 0→1→2→2.5→3→4→5→6 |
+| `--fast` | Step 0→1→2→2.5→3(轻量)→4→5→6 |
+| `--minimal` | Step 0→1→2→2.5→4(仅排版)→5→6 |
 
 ## 硬规则
 
 - 禁止并步、跳步、伪造审查
 - 必须使用 `Agent` 工具调用指定 subagent；不得用主流程口头代替 subagent 输出
 - blocking issue 未解决不进 Step 4/5
+- Step 2.5 草稿硬闸未通过不进 reviewer/rewrite/polish；必须带失败原因重生草稿
+- 非平凡续写必须读取文件化作者意图：`设定集/author_bible.md` 与 `大纲/chapter_{NNNN}_brief.md`
+- 禁止让模型假设已经读过未来章节；隐藏/参考章节只能用于事后评估，不能进入生成或重写 prompt
 - 失败只补跑失败步骤，不回退
 - 参考资料按步骤按需加载
 
@@ -53,6 +56,24 @@ export PROJECT_ROOT="$(python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-roo
 python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" placeholder-scan --format text
 ```
 
+### Step 0：作者设定与章节 brief
+
+非平凡续写（感情线、敌对线、长期伏笔、能力体系、卷级推进）必须先准备或读取作者意图文件：
+
+- `${PROJECT_ROOT}/设定集/author_bible.md`
+- `${PROJECT_ROOT}/大纲/chapter_{chapter_num:04d}_brief.md`
+
+如果文件缺失，但用户已经在当前对话给出足够设定，先把设定写入上述 UTF-8 文件再继续。不要把长中文设定塞进 shell inline prompt。
+
+模板：
+
+- `${CLAUDE_PLUGIN_ROOT}/templates/author_bible.template.md`
+- `${CLAUDE_PLUGIN_ROOT}/templates/chapter_brief.template.md`
+
+`author_bible.md` 至少包含：主角人设、关键角色人设、关系阶段、世界观边界、禁止新增能力/系统、近 5-10 章方向、风格机制。
+
+`chapter_{NNNN}_brief.md` 至少包含：本章必须节点、禁止节点、人物当前状态、关系证据卡、允许的下一步让步、世界观守门、结尾策略。
+
 ### 准备：刷新合同树
 
 genre 从 `.webnovel/state.json` 的初始化配置快照读取，用于刷新合同树；写前主链真源仍是 `.story-system/` 合同。调用 story-system 前必须先从详细大纲解析真实本章目标，禁止传 `{章纲目标}`、`第N章章纲目标` 等占位 query。
@@ -82,7 +103,7 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${WORKSPACE_ROOT}" \
 ```text
 Agent(
   subagent_type: "webnovel-writer:context-agent",
-  prompt: "chapter={chapter_num}; project_root=${PROJECT_ROOT}; scripts_dir=${SCRIPTS_DIR}; storage_path=${PROJECT_ROOT}/.webnovel; state_file=${PROJECT_ROOT}/.webnovel/state.json（projection/read-model，仅兼容读取）。先 research，再按 本章硬性约束→CBN/CPNs/CEN→本章禁区→风格指引→dynamic_context补充参考 的顺序输出五段写作任务书。"
+  prompt: "chapter={chapter_num}; project_root=${PROJECT_ROOT}; scripts_dir=${SCRIPTS_DIR}; storage_path=${PROJECT_ROOT}/.webnovel; state_file=${PROJECT_ROOT}/.webnovel/state.json（projection/read-model，仅兼容读取）。必须优先读取 ${PROJECT_ROOT}/设定集/author_bible.md 与 ${PROJECT_ROOT}/大纲/chapter_{chapter_num:04d}_brief.md（若存在）；不得假设已读未来章节；先 research，再按 作者意图→本章硬性约束→CBN/CPNs/CEN→本章禁区→关系证据卡→风格指引→dynamic_context补充参考 的顺序输出写作任务书。"
 )
 ```
 
@@ -90,7 +111,21 @@ Agent(
 
 ### Step 2：起草正文
 
-只根据任务书起草。不加载 core-constraints/anti-ai-guide（已内化到任务书）。只输出纯正文，无占位符。有结构化节点时围绕 CBN→CPNs→CEN 展开。中文思维写作。
+只根据任务书、作者设定文件、章节 brief、已批准的前文证据起草。不加载隐藏/未来章节。不加载 core-constraints/anti-ai-guide（已内化到任务书）。只输出纯正文，无占位符。有结构化节点时围绕 CBN→CPNs→CEN 展开。中文思维写作。
+
+### Step 2.5：草稿硬闸
+
+正文初稿生成后，必须先跑本地硬规则 gate：
+
+```bash
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" post-rewrite validate \
+  --file "${CHAPTER_FILE}" \
+  --out "${PROJECT_ROOT}/.webnovel/tmp/post_generation_validation.json"
+```
+
+非零退出或 `blocking=true` 时，停止当前流程。读取 `${PROJECT_ROOT}/.webnovel/tmp/post_generation_validation.json`，把失败原因写回新一轮起草 prompt，重跑 Step 2。禁止把未通过草稿送入 Step 3/4。
+
+当前 blocking 包括：关系角色过早主动求助/依附、主角胁迫/威胁/舆论逼迫/反复堵人、未授权新任务/数值/被动能力系统、缺失本章必要 payoff。
 
 ### Step 3：审查
 
@@ -116,9 +151,21 @@ blocking=true → 修复后重审，不进 Step 4。`--fast` 只检查 setting/t
 
 ### Step 4：润色
 
-加载 `polish-guide.md`、`typesetting.md`、`style-adapter.md`。
+Step 4 只处理已通过 Step 2.5 与 Step 3 的正文。加载 `polish-guide.md`、`typesetting.md`、`style-adapter.md`。
 
-顺序：修复非 blocking issue → 风格适配 → 排版 → Anti-AI 终检。
+顺序：post-rewrite 表达压缩/风格校准 → 修复非 blocking issue → 风格适配 → 排版 → Anti-AI 终检。
+
+```bash
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" post-rewrite rewrite \
+  --draft "${CHAPTER_FILE}" \
+  --style-sample "${PROJECT_ROOT}/正文/{recent_reference_chapter}.md" \
+  --author-settings "${PROJECT_ROOT}/设定集/author_bible.md" \
+  --out "${PROJECT_ROOT}/.webnovel/tmp/chapter_rewritten.md" \
+  --report-out "${PROJECT_ROOT}/.webnovel/tmp/post_rewrite_report.json" \
+  --validate-draft
+```
+
+`post-rewrite rewrite` 只改表达、节奏、压缩与风格，不救剧情骨架。如果 `--validate-draft` 阻断，回 Step 2，不得继续润色。
 
 只改表达不改事实。`anti_ai_force_check=fail` 时不进 Step 5。`--minimal` 仅排版。
 
@@ -181,42 +228,4 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" bac
 
 ## 失败恢复
 
-审查缺失→重跑 Step 3。摘要/状态/记忆缺失→重跑 Step 5。润色失真→回 Step 4 修复后重跑 Step 5。
-
-## Author Bible And Draft Gate Addendum
-
-For non-trivial continuation work, especially romance, rivalry, power-system, or long-arc chapters, use file-based author intent instead of shell-inline prompt text.
-
-Recommended files:
-
-- `${PROJECT_ROOT}/设定集/author_bible.md`
-- `${PROJECT_ROOT}/大纲/chapter_{NNNN}_brief.md`
-
-Templates live in:
-
-- `${PLUGIN_ROOT}/templates/author_bible.template.md`
-- `${PLUGIN_ROOT}/templates/chapter_brief.template.md`
-
-The drafting prompt must consume these files together with prior chapter evidence. It must not rely on the model "already knowing" future chapters.
-
-After Step 2 draft generation and before reviewer/rewrite/polish, run the local hard gate:
-
-```bash
-python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" post-rewrite validate \
-  --file "${CHAPTER_FILE}" \
-  --out "${PROJECT_ROOT}/.webnovel/tmp/post_generation_validation.json"
-```
-
-If validation returns non-zero or `blocking=true`, do not enter rewrite/polish. Regenerate the draft with the failure reason and the same author bible/chapter brief. Only drafts that pass this gate may enter post-generation rewrite:
-
-```bash
-python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" post-rewrite rewrite \
-  --draft "${CHAPTER_FILE}" \
-  --style-sample "${PROJECT_ROOT}/正文/{recent_reference_chapter}.md" \
-  --author-settings "${PROJECT_ROOT}/设定集/author_bible.md" \
-  --out "${PROJECT_ROOT}/.webnovel/tmp/chapter_rewritten.md" \
-  --report-out "${PROJECT_ROOT}/.webnovel/tmp/post_rewrite_report.json" \
-  --validate-draft
-```
-
-The rewrite pass is expression-only. It preserves approved plot events and should never be used to rescue a draft with broken story events, coercive relationship behavior, or unauthorized new power systems.
+审查缺失→重跑 Step 3。草稿硬闸失败→回 Step 2 重生草稿。摘要/状态/记忆缺失→重跑 Step 5。润色失真→回 Step 4 修复后重跑 Step 5。
