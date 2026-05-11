@@ -185,3 +185,26 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "{project_root}" extr
 | 章纲无结构化节点 | 跳过情节结构，不阻断 |
 
 章节编号统一 4 位：`0001`、`0099`、`0100`。
+
+## Relationship Continuity Retrieval Addendum
+
+When the target chapter contains romance, rivalry, trust, betrayal, pursuit, apology, or any named relationship beat, do not infer character behavior from trope labels alone.
+
+First look for file-based author intent before writing the task book:
+
+- `设定集/author_bible.md`
+- `大纲/chapter_{NNNN}_brief.md`
+
+If present, treat these files as author-supplied intent and combine them with prior chapter evidence. Do not assume the model has read future chapters. Do not let retrieved prior text override explicit author intent unless it creates a direct contradiction that must be surfaced.
+
+Before writing the task book:
+
+1. Query relationship state for each central character pair.
+2. Query recent appearances for each central character and read the latest relevant scenes or summaries.
+3. Run RAG/BM25/graph-hybrid retrieval with queries that combine both names and continuity terms, such as `{A} {B} 态度 关系 互动 边界 人设`.
+4. Prefer observed behavior from recent chapters over target plot desire. If prior evidence shows a character is guarded, cold, cautious, or socially distant, the next beat should use minimal concession, deflection, conditions, silence, or indirect action before any direct initiative.
+5. In the task book, state the inferred behavior boundary as a short evidence-based note. Do not present it as an external hard rule invented after reading the chapter.
+6. If evidence is thin or contradictory, mark uncertainty and choose the conservative behavior that least breaks the previous chapters.
+7. For each central relationship, include a compact evidence card: observed recent behavior, current distance/trust level, safe next concession, and unsupported leaps to avoid. The card must be derived from retrieved prior text, not from genre assumptions.
+8. Choose a chapter endpoint that preserves the current relationship distance. If a guarded character only made a limited concession, do not add a private afterscene that resolves ambiguity through a smile, longing, or sudden warmth unless prior evidence already supports that turn.
+9. Before drafting, sample the last 1-2 relevant chapters for style mechanics: dialogue density, paragraph length, crowd-reaction rhythm, joke placement, and narration distance. Include only actionable mechanics in the task book; do not summarize style as vague labels.

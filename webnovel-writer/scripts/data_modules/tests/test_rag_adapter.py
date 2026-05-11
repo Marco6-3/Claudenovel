@@ -100,6 +100,9 @@ async def test_store_chunks_with_embedding_failure(tmp_path, monkeypatch):
     ]
     stored = await adapter.store_chunks(chunks)
     assert stored == 1
+    stats = adapter.get_stats()
+    assert stats["vectors"] == 2
+    assert adapter.bm25_search("短", top_k=1)
 
 
 @pytest.mark.asyncio

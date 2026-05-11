@@ -415,15 +415,32 @@ class RAGAdapter:
 
             for chunk, embedding in zip(chunks, embeddings):
                 if embedding is None:
-                    # 嵌入失败，跳过该 chunk（仅存储 BM25 索引供关键词检索）
+                    # Keep the content row even when embedding fails. BM25 search
+                    # resolves hits through the vectors table, so deleting the row
+                    # makes keyword fallback unusable.
                     skipped += 1
+                    chunk_type = chunk.get("chunk_type") or "scene"
                     chunk_id = chunk.get("chunk_id")
                     if not chunk_id:
-                        if chunk.get("chunk_type") == "summary":
+                        if chunk_type == "summary":
                             chunk_id = f"ch{int(chunk['chapter']):04d}_summary"
                         else:
                             chunk_id = f"ch{int(chunk['chapter']):04d}_s{int(chunk['scene_index'])}"
                     try:
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO vectors
+                            (chunk_id, chapter, scene_index, content, embedding, parent_chunk_id, chunk_type, source_file)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            chunk_id,
+                            chunk["chapter"],
+                            chunk.get("scene_index", 0) if chunk_type == "scene" else 0,
+                            chunk.get("content", ""),
+                            None,
+                            chunk.get("parent_chunk_id"),
+                            chunk_type,
+                            chunk.get("source_file"),
+                        ))
                         self._update_bm25_index(cursor, chunk_id, chunk.get("content", ""))
                     except Exception as e:
                         errors.append(f"BM25 index failed for {chunk_id}: {e}")

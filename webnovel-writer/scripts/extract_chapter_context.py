@@ -38,6 +38,11 @@ def _ensure_scripts_path():
 
 _RAG_TRIGGER_KEYWORDS = (
     "关系",
+    "感情",
+    "互动",
+    "态度",
+    "人设",
+    "性格",
     "恩怨",
     "冲突",
     "敌对",
@@ -178,7 +183,7 @@ def _build_rag_query(outline: str, chapter_num: int, min_chars: int, max_chars: 
     if not any(keyword in plain for keyword in _RAG_TRIGGER_KEYWORDS):
         return ""
 
-    if "关系" in plain or "师徒" in plain or "敌对" in plain or "同盟" in plain:
+    if any(term in plain for term in ("关系", "感情", "互动", "态度", "人设", "性格", "师徒", "敌对", "同盟")):
         topic = "人物关系与动机"
     elif "地点" in plain or "势力" in plain:
         topic = "地点势力与场景约束"

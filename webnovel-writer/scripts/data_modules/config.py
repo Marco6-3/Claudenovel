@@ -87,6 +87,13 @@ def _default_context_template_weights_dynamic() -> dict[str, dict[str, dict[str,
     }
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class DataModulesConfig:
     """数据模块配置"""
@@ -185,7 +192,7 @@ class DataModulesConfig:
     vector_prefilter_recent_candidates: int = 200
 
     # ================= Graph-RAG 配置 =================
-    graph_rag_enabled: bool = False
+    graph_rag_enabled: bool = field(default_factory=lambda: _env_bool("GRAPH_RAG_ENABLED", False))
     graph_rag_expand_hops: int = 1
     graph_rag_max_expanded_entities: int = 30
     graph_rag_candidate_limit: int = 150

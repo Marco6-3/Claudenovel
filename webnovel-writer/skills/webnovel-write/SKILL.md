@@ -182,3 +182,41 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" bac
 ## 失败恢复
 
 审查缺失→重跑 Step 3。摘要/状态/记忆缺失→重跑 Step 5。润色失真→回 Step 4 修复后重跑 Step 5。
+
+## Author Bible And Draft Gate Addendum
+
+For non-trivial continuation work, especially romance, rivalry, power-system, or long-arc chapters, use file-based author intent instead of shell-inline prompt text.
+
+Recommended files:
+
+- `${PROJECT_ROOT}/设定集/author_bible.md`
+- `${PROJECT_ROOT}/大纲/chapter_{NNNN}_brief.md`
+
+Templates live in:
+
+- `${PLUGIN_ROOT}/templates/author_bible.template.md`
+- `${PLUGIN_ROOT}/templates/chapter_brief.template.md`
+
+The drafting prompt must consume these files together with prior chapter evidence. It must not rely on the model "already knowing" future chapters.
+
+After Step 2 draft generation and before reviewer/rewrite/polish, run the local hard gate:
+
+```bash
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" post-rewrite validate \
+  --file "${CHAPTER_FILE}" \
+  --out "${PROJECT_ROOT}/.webnovel/tmp/post_generation_validation.json"
+```
+
+If validation returns non-zero or `blocking=true`, do not enter rewrite/polish. Regenerate the draft with the failure reason and the same author bible/chapter brief. Only drafts that pass this gate may enter post-generation rewrite:
+
+```bash
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" post-rewrite rewrite \
+  --draft "${CHAPTER_FILE}" \
+  --style-sample "${PROJECT_ROOT}/正文/{recent_reference_chapter}.md" \
+  --author-settings "${PROJECT_ROOT}/设定集/author_bible.md" \
+  --out "${PROJECT_ROOT}/.webnovel/tmp/chapter_rewritten.md" \
+  --report-out "${PROJECT_ROOT}/.webnovel/tmp/post_rewrite_report.json" \
+  --validate-draft
+```
+
+The rewrite pass is expression-only. It preserves approved plot events and should never be used to rescue a draft with broken story events, coercive relationship behavior, or unauthorized new power systems.

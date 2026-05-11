@@ -364,6 +364,9 @@ def main() -> None:
     p_review_pipeline.add_argument("--report-file", default="", help="审查报告路径")
     p_review_pipeline.add_argument("--save-metrics", action="store_true", help="直接写入 index.db")
 
+    p_post_rewrite = sub.add_parser("post-rewrite", help="post-generation rewrite and local quality checks")
+    p_post_rewrite.add_argument("args", nargs=argparse.REMAINDER)
+
     p_placeholder_scan = sub.add_parser("placeholder-scan", help="扫描大纲/设定集未补齐占位")
     p_placeholder_scan.add_argument("--format", choices=["json", "text"], default="json", help="输出格式")
 
@@ -481,6 +484,8 @@ def main() -> None:
         if args.save_metrics:
             return_args.append("--save-metrics")
         raise SystemExit(_run_script("review_pipeline.py", return_args))
+    if tool == "post-rewrite":
+        raise SystemExit(_run_script("post_generation_rewrite.py", rest))
     if tool == "placeholder-scan":
         raise SystemExit(_run_data_module("placeholder_scanner", [*forward_args, "--format", str(args.format)]))
     if tool == "master-outline-sync":
