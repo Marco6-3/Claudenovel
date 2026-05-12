@@ -2,7 +2,16 @@
 
 这个仓库用于对长篇小说文本做结构化解析、人物统计、关系抽取、章节质量评估，以及面向大上下文 LLM 的证据化提示词构建。
 
+当前仓库已经并入原 `webnovel-writer` 项目，作为子目录 `webnovel-writer/` 保留。这样处理的目的是同时保留两边的 Git 历史，并避免顶层 `README.md`、`requirements.txt`、`CLAUDE.md` 等文件直接冲突。
+
 默认入口是 `analyze_enhanced.py`。脚本会自动读取当前目录下的 `.txt` 小说文件，并把结果写入 `novel_analysis_enhanced/`。
+
+## 当前仓库结构
+
+- 根目录：`Claudenovel` 的分析、证据包、续写与插件主线。
+- `webnovel-writer/`：从原仓库迁移进来的完整子项目，保留原文档、插件、dashboard、agents 与写作流程实现。
+
+如果你要继续开发原 `webnovel-writer` 侧的功能，请优先进入 `webnovel-writer/README.md` 查看原项目说明。
 
 ## 环境准备
 
