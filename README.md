@@ -9,6 +9,7 @@
 ## 当前仓库结构
 
 - 根目录：`Claudenovel` 的分析、证据包、续写与插件主线。
+- `agent_writer/`：基于 `novel-research` 调研结果新增的独立 agent 写作体系，负责单章合同、角色边界、LLM 生成、审稿返修、人工提交与 SQLite 索引。
 - `webnovel-writer/`：从原仓库迁移进来的完整子项目，保留原文档、插件、dashboard、agents 与写作流程实现。
 
 如果你要继续开发原 `webnovel-writer` 侧的功能，请优先进入 `webnovel-writer/README.md` 查看原项目说明。
@@ -22,6 +23,45 @@ pip install -r requirements.txt
 ```
 
 `jieba` 是可选增强依赖。不开启 `--use-jieba` 时，主流程仍可运行。
+
+## Agent 写作体系：单章极致质量闭环
+
+`agent_writer/` 是本仓库的新写作 agent 子系统。它不是直接让模型续写正文，而是按调研结论执行：
+
+1. 作者策略与读者期待
+2. 章节合同
+3. 角色行为边界
+4. Prewrite plan
+5. LLM 生成草稿
+6. 本地质量门禁
+7. LLM 返修
+8. 人工确认提交
+9. SQLite 索引与状态回写
+
+LLM 配置读取 `.env`，支持 `DEEPSEEK_*`、`OPENAI_*` 或 `LLM_*`：
+
+```text
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_API_KEY=你的 key
+```
+
+最小闭环示例：
+
+```powershell
+python -X utf8 agent_writer_cli.py --project-root .agent-demo init --name "测试书" --genre "都市异能" --premise "主角调查旧楼铃声" --target-reader "男频都市读者"
+
+python -X utf8 agent_writer_cli.py --project-root .agent-demo plan --chapter 1 --title "旧楼的第三声铃" --goal "主角进入旧楼确认铃声来源" --payoff "找到染血校牌" --ending-hook "校牌背面出现主角的名字" --character "秦思妍"
+
+python -X utf8 agent_writer_cli.py --project-root .agent-demo llm-smoke
+python -X utf8 agent_writer_cli.py --project-root .agent-demo generate --chapter 1
+python -X utf8 agent_writer_cli.py --project-root .agent-demo review --chapter 1
+python -X utf8 agent_writer_cli.py --project-root .agent-demo rewrite --chapter 1
+python -X utf8 agent_writer_cli.py --project-root .agent-demo commit --chapter 1 --approve
+python -X utf8 agent_writer_cli.py --project-root .agent-demo index-report
+```
+
+每个书项目会生成 `story_bible/`、`expectations/`、`chapter_contracts/`、`prompts/`、`drafts/`、`reviews/`、`accepted/`、`commits/` 和 `state/agent_writer.db`。
 
 ## 基础分析
 

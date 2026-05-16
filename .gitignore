@@ -14,4 +14,9 @@ novel_analysis_enhanced/
 novel_analysis/
 novel_analysis_comparison/
 novel_inspiration_library/
+.agent-demo/
+.agent-writer-smoke/
+.tmp/
 *.cache
+*.db-wal
+*.db-shm

@@ -1,0 +1,21 @@
+{
+  "title": "八层模块协议规则包",
+  "source": "novel-research/novle1/09-模块输入输出与检查项.md",
+  "principles": [
+    "作者设定层输出不变量，下游只能引用不能擅自改写",
+    "读者期待层输出章节收益要求，不直接决定剧情",
+    "单章设计层输出章节合同，不输出空泛摘要",
+    "质量验收层优先输出阻断项、风险项和返修路径"
+  ],
+  "checks": [
+    "writer_strategy 是否存在",
+    "reader_expectation_map 是否存在",
+    "chapter_contract 是否包含目标、payoff、禁区和尾钩",
+    "character_constraints 是否覆盖出场角色"
+  ],
+  "blocking_rules": [
+    "缺少章节合同仍生成正文",
+    "缺少角色边界仍写关系推进",
+    "审稿 blocking 后仍提交"
+  ]
+}
