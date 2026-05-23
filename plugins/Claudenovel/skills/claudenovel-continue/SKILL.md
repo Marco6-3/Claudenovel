@@ -1,6 +1,6 @@
 ---
 name: claudenovel-continue
-description: 从 editorial_revision_report.md 中选择后续剧情路线，结合最近章节文风和记忆摘要生成下一章正文。适用于用户要求“续写”“按第几条路线写下一章”“继续写后面剧情”。
+description: 从任务根目录 report.md 中选择后续剧情路线，结合最近章节文风和记忆摘要生成下一章正文。适用于用户要求“续写”“按第几条路线写下一章”“继续写后面剧情”。
 allowed-tools: Read Write Edit Bash
 ---
 
@@ -12,7 +12,7 @@ allowed-tools: Read Write Edit Bash
 
 ## 前置条件
 
-- 已有 `editorial_revision_report.md`。
+- 已有任务根目录 `report.md`，或旧版 `editorial_revision_report.md`。
 - 推荐提供全文小说 `.txt`，用于提取最近几章文风。
 - 可选提供 `memory_summary.json`。
 - `.env` 或环境变量中配置了 DeepSeek/OpenAI 兼容模型。
@@ -27,7 +27,7 @@ allowed-tools: Read Write Edit Bash
 
 ```powershell
 python "<PLUGIN_ROOT>\continue_novel.py" `
-  --report "<OUT_DIR>\\editorial_revision_report.md" `
+  --report "<OUT_DIR>\\report.md" `
   --list
 ```
 
@@ -35,7 +35,7 @@ python "<PLUGIN_ROOT>\continue_novel.py" `
 
 ```powershell
 python "<PLUGIN_ROOT>\continue_novel.py" `
-  --report "<OUT_DIR>\\editorial_revision_report.md" `
+  --report "<OUT_DIR>\\report.md" `
   --route 0 `
   --novel "<NOVEL_TXT>" `
   --lookback 3 `

@@ -1,6 +1,6 @@
 ---
 name: claudenovel-report
-description: 基于 claudenovel-analyze 生成的 editorial_revision_prompt.md 调用 DeepSeek/OpenAI 兼容模型，产出具体、尖锐、可执行的编辑诊断报告。
+description: 基于 claudenovel-analyze 生成的 data/editorial_revision_prompt.md 调用 DeepSeek/OpenAI 兼容模型，产出任务根目录 report.md 形式的具体、尖锐、可执行编辑诊断报告。
 allowed-tools: Read Write Edit Bash
 ---
 
@@ -12,7 +12,7 @@ allowed-tools: Read Write Edit Bash
 
 ## 前置条件
 
-- 已有 `editorial_revision_prompt.md`。
+- 已有任务文件夹，且其中存在 `data/editorial_revision_prompt.md`。
 - `.env` 或环境变量中配置了 `DEEPSEEK_API_KEY` 或 `OPENAI_API_KEY`。
 - 推荐模型配置：
   - `DEEPSEEK_BASE_URL=https://api.deepseek.com`
@@ -30,8 +30,9 @@ allowed-tools: Read Write Edit Bash
 python "<PLUGIN_ROOT>\analyze_enhanced.py" `
   --txt-path "<NOVEL_TXT>" `
   --out-dir "<OUT_DIR>" `
+  --organized-output `
   --llm-context-report `
-  --context-prompt "<OUT_DIR>\\editorial_revision_prompt.md" `
+  --context-prompt "<OUT_DIR>\\data\\editorial_revision_prompt.md" `
   --llm-output-name "editorial_revision_report.md"
 ```
 
@@ -51,6 +52,7 @@ python "<PLUGIN_ROOT>\analyze_enhanced.py" `
 
 默认输出：
 
-- `editorial_revision_report.md`
+- `report.md`
+- 底座数据继续保留在 `data/`
 
 向用户回复时给出报告路径、模型名、报告是否通过验收，以及最重要的 P0/P1 摘要。
