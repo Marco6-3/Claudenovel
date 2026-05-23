@@ -1,20 +1,29 @@
-# Claudenovel 长篇小说分析工具
+# Claudenovel
 
-这个仓库用于对长篇小说文本做结构化解析、人物统计、关系抽取、章节质量评估，以及面向大上下文 LLM 的证据化提示词构建。
+Claudenovel 是一个面向中文长篇小说的分析、诊断和写作辅助工具。它会把小说文本解析成章节、场景、人物、关系、情绪曲线和质量指标，再生成带原文证据编号的分析材料，供作者、编辑或 LLM 继续做深度判断。
 
-当前仓库已经并入原 `webnovel-writer` 项目，作为子目录 `webnovel-writer/` 保留。这样处理的目的是同时保留两边的 Git 历史，并避免顶层 `README.md`、`requirements.txt`、`CLAUDE.md` 等文件直接冲突。
+项目的核心原则是：重要结论必须能回到原文证据。证据编号形如 `[CH035-P001]`，表示第 35 章第 1 段。没有足够证据时，应明确标记为“证据不足”。
 
-默认入口是 `analyze_enhanced.py`。脚本会自动读取当前目录下的 `.txt` 小说文件，并把结果写入 `novel_analysis_enhanced/`。
+## 能做什么
 
-## 当前仓库结构
+- 解析中文小说 `.txt`，生成章节、场景、对白和段落索引。
+- 统计人物出现频率、章节跨度和场景共现关系。
+- 抽取人物关系三元组，辅助判断关系变化。
+- 生成章节情绪曲线和基础质量指标。
+- 构建带证据编号的 LLM 上下文包，减少空泛分析。
+- 生成编辑诊断提示词，用于深度改稿、剧情路线和续写建议。
+- 针对具体问题生成证据矩阵，例如“某角色是否抛弃另一方”“结局选择是否合理”。
+- 支持单章改写、章节续写和独立的 agent 写作闭环。
 
-- 根目录：`Claudenovel` 的分析、证据包、续写与插件主线。
-- `agent_writer/`：基于 `novel-research` 调研结果新增的独立 agent 写作体系，负责单章合同、角色边界、LLM 生成、审稿返修、人工提交与 SQLite 索引。
-- `webnovel-writer/`：从原仓库迁移进来的完整子项目，保留原文档、插件、dashboard、agents 与写作流程实现。
+## 适合场景
 
-如果你要继续开发原 `webnovel-writer` 侧的功能，请优先进入 `webnovel-writer/README.md` 查看原项目说明。
+- 想快速了解一部长篇小说的人物、关系和情绪走势。
+- 想让 LLM 基于原文证据做编辑诊断，而不是只给泛泛读后感。
+- 想把大体量小说整理成可引用、可追溯的分析资料。
+- 想围绕某条人物线、感情线或结局争议做证据化问答。
+- 想搭建“章节合同 -> 生成 -> 审稿 -> 返修 -> 人工提交”的写作流程。
 
-## 环境准备
+## 快速开始
 
 ```powershell
 python -m venv .venv
@@ -22,23 +31,139 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-`jieba` 是可选增强依赖。不开启 `--use-jieba` 时，主流程仍可运行。
+把 UTF-8 编码的小说 `.txt` 放到项目根目录，然后运行：
 
-## Agent 写作体系：单章极致质量闭环
+```powershell
+python analyze_enhanced.py
+```
 
-`agent_writer/` 是本仓库的新写作 agent 子系统。它不是直接让模型续写正文，而是按调研结论执行：
+默认输出目录是 `novel_analysis_enhanced/`。
 
-1. 作者策略与读者期待
-2. 章节合同
-3. 角色行为边界
-4. Prewrite plan
-5. LLM 生成草稿
-6. 本地质量门禁
-7. LLM 返修
-8. 人工确认提交
-9. SQLite 索引与状态回写
+分析外部小说时，建议显式指定输入和输出目录：
 
-LLM 配置读取 `.env`，支持 `DEEPSEEK_*`、`OPENAI_*` 或 `LLM_*`：
+```powershell
+python analyze_enhanced.py `
+  --txt-path "C:\path\to\novel.txt" `
+  --out-dir "C:\path\to\output"
+```
+
+## 常用命令
+
+生成证据化 LLM 上下文包：
+
+```powershell
+python analyze_enhanced.py `
+  --build-context `
+  --context-query "陈默和秦思妍的关系变化" `
+  --focus-entity "陈默" `
+  --focus-entity "秦思妍"
+```
+
+生成“原文整理 + 评价改进 + 后续剧情”的工作流产物：
+
+```powershell
+python analyze_enhanced.py `
+  --common-workflow `
+  --context-query "评价当前剧情并提出后续路线" `
+  --source-start 1 `
+  --source-end 20
+```
+
+调用已配置的 OpenAI-compatible 模型生成编辑报告：
+
+```powershell
+python analyze_enhanced.py `
+  --llm-context-report `
+  --context-prompt .\novel_analysis_enhanced\editorial_revision_prompt.md `
+  --llm-output-name editorial_revision_report.md
+```
+
+单章质量评估：
+
+```powershell
+python analyze_enhanced.py --evaluate-chapter 1
+python analyze_enhanced.py --evaluate-file .\my_chapter.txt
+```
+
+章节改写：
+
+```powershell
+python rewrite_chapter.py `
+  --chapter-file "C:\path\to\chapter.txt" `
+  --novel "C:\path\to\full_novel.txt" `
+  --out-dir "rewritten"
+```
+
+从编辑报告中选择路线并续写：
+
+```powershell
+python continue_novel.py --report "report.md" --list
+python continue_novel.py --report "report.md" --route 0 --novel "full.txt"
+```
+
+## 主要输出
+
+常见输出文件包括：
+
+- `entity_stats.json`：人物出现频率、章节跨度、场景共现。
+- `relation_triples.json`：人物关系三元组。
+- `sentiment_arc.json`：章节情绪走势。
+- `enhanced_toc.md`：增强目录。
+- `enhanced_briefs.json`：章节摘要索引。
+- `evidence_pack.json`：带 `[CHxxx-Pxxx]` 编号的证据索引。
+- `llm_context_prompt.md`：可交给 LLM 的证据化分析提示词。
+- `llm_source_pack_detailed.md`：保留原文段落和证据编号的原文包。
+- `editorial_revision_prompt.md`：用于生成深度编辑诊断报告的提示词。
+
+如果启用整理后的输出布局，任务根目录通常会放面向用户阅读的 `report.md`，底层数据放在 `data/`。
+
+## Agent 写作体系
+
+`agent_writer/` 是一个独立的单章写作闭环，不是简单续写脚本。它围绕作者策略、读者期待、章节合同、角色边界、草稿生成、本地审稿、LLM 返修和人工确认提交运行。
+
+最小示例：
+
+```powershell
+python -X utf8 agent_writer_cli.py --project-root .agent-demo init --name "测试书" --genre "都市异能" --premise "主角调查旧楼铃声" --target-reader "男频都市读者"
+
+python -X utf8 agent_writer_cli.py --project-root .agent-demo plan --chapter 1 --title "旧楼的第三声铃" --goal "主角进入旧楼确认铃声来源" --payoff "找到染血校牌" --ending-hook "校牌背面出现主角的名字" --character "秦思妍"
+
+python -X utf8 agent_writer_cli.py --project-root .agent-demo generate --chapter 1
+python -X utf8 agent_writer_cli.py --project-root .agent-demo review --chapter 1
+python -X utf8 agent_writer_cli.py --project-root .agent-demo rewrite --chapter 1
+python -X utf8 agent_writer_cli.py --project-root .agent-demo commit --chapter 1 --approve
+```
+
+更完整的说明见 `AGENT_WRITER.md`。
+
+## Agent 和插件支持
+
+本仓库已经提供面向 Codex、Claude Code 和 Kimi CLI 的 skill/plugin 入口。自动化 agent 应优先读取这些文件，而不是把 README 当作执行手册：
+
+- `CLAUDE.md`：仓库级 agent 协作规则、架构约束和常用命令。
+- `skills/claudenovel-analyze/SKILL.md`：小说分析、证据包和深度问答。
+- `skills/claudenovel-report/SKILL.md`：基于提示词生成编辑诊断报告。
+- `skills/claudenovel-rewrite/SKILL.md`：单章审查和改写。
+- `skills/claudenovel-continue/SKILL.md`：基于报告选择路线并续写。
+- `plugins/Claudenovel/`：可安装的插件包。
+
+README 只作为人类入口页；agent 的触发词、执行步骤和验收标准维护在 skill/plugin 文档中。`AGENTS.md` 可作为个人本地指令文件使用，但不作为仓库分发文档。
+
+## 项目结构
+
+- `novel_parser/`：核心解析、统计、检索、证据包和 LLM 上下文构建模块。
+- `analyze_enhanced.py`：主分析入口。
+- `answer_question.py`：针对具体文学判断的证据化问答入口。
+- `rewrite_chapter.py`：章节改写入口。
+- `continue_novel.py`：续写入口。
+- `agent_writer/`：单章写作 agent 子系统。
+- `skills/`：本仓库的 agent skill 定义。
+- `plugins/Claudenovel/`：插件化后的可分发运行包。
+- `webnovel-writer/`：并入的原 `webnovel-writer` 子项目，保留其原始结构和历史。
+
+## 模型配置
+
+项目读取 `.env` 或环境变量中的 OpenAI-compatible 配置。常用变量：
 
 ```text
 DEEPSEEK_BASE_URL=https://api.deepseek.com
@@ -46,228 +171,22 @@ DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_API_KEY=你的 key
 ```
 
-最小闭环示例：
+也支持 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL` 作为 fallback。
 
-```powershell
-python -X utf8 agent_writer_cli.py --project-root .agent-demo init --name "测试书" --genre "都市异能" --premise "主角调查旧楼铃声" --target-reader "男频都市读者"
+如果不配置模型，基础解析、统计、证据包和部分本地报告仍可运行；需要 LLM 的深度诊断、改写和续写不会自动完成。
 
-python -X utf8 agent_writer_cli.py --project-root .agent-demo plan --chapter 1 --title "旧楼的第三声铃" --goal "主角进入旧楼确认铃声来源" --payoff "找到染血校牌" --ending-hook "校牌背面出现主角的名字" --character "秦思妍"
+## 更多文档
 
-python -X utf8 agent_writer_cli.py --project-root .agent-demo llm-smoke
-python -X utf8 agent_writer_cli.py --project-root .agent-demo generate --chapter 1
-python -X utf8 agent_writer_cli.py --project-root .agent-demo review --chapter 1
-python -X utf8 agent_writer_cli.py --project-root .agent-demo rewrite --chapter 1
-python -X utf8 agent_writer_cli.py --project-root .agent-demo commit --chapter 1 --approve
-python -X utf8 agent_writer_cli.py --project-root .agent-demo index-report
-```
+- `ARCHITECTURE.md`：模块结构和设计说明。
+- `CLAUDE.md`：agent 工作规则。
+- `AGENT_WRITER.md`：单章写作闭环说明。
+- `DEEP_QUESTION_ANSWERING.md`：深度问答和 1M 上下文阅读包说明。
+- `INSPIRATION_LIBRARY.md`：灵感库使用说明。
+- `RETRIEVAL_BENCHMARK.md`：检索评测说明。
 
-每个书项目会生成 `story_bible/`、`expectations/`、`chapter_contracts/`、`prompts/`、`drafts/`、`reviews/`、`accepted/`、`commits/` 和 `state/agent_writer.db`。
+## 当前限制
 
-## 基础分析
-
-```powershell
-python analyze_enhanced.py
-```
-
-常见输出包括：
-
-- `entity_stats.json`：人物出现频率、章节跨度、场景共现。
-- `relation_triples.json`：人物关系三元组。
-- `sentiment_arc.json`：章节情绪走势。
-- `enhanced_toc.md`：增强目录。
-- `enhanced_briefs.json`：章节摘要索引。
-
-## 生成证据化 LLM 上下文包
-
-如果要利用 DeepSeek 1M 上下文窗口，又尽量减少噪声，可以先生成带编号的证据包：
-
-```powershell
-python analyze_enhanced.py `
-  --build-context `
-  --context-query "陈默和秦思妍的关系变化" `
-  --focus-entity "陈默" `
-  --focus-entity "秦思妍" `
-  --context-max-items 80 `
-  --context-max-chars 80000
-```
-
-输出文件：
-
-- `evidence_pack.json`：结构化证据索引，每条证据都有类似 `[CH054-P040]` 的稳定编号。
-- `llm_context_prompt.md`：可直接复制给 LLM 的提示词，要求模型每个结论必须引用证据编号。
-
-这个流程不是把全文无差别塞进上下文，而是先按查询目标和关注人物筛选高信号段落，再让 LLM 基于证据分析。
-
-## Agent 调用指南：分析新小说片段并生成可改写报告
-
-当另一个 agent 需要分析用户给的新小说或小说片段时，优先走这一节。目标不是生成泛泛读后感，而是生成**具体、尖锐、可直接改章节**的编辑诊断报告，供后续 `feat/chapter-rewriter` 读取和执行。
-
-### 自然语言触发
-
-如果用户用自然语言说：
-
-- “帮我分析小说”
-- “评价一下这个小说片段”
-- “看看这几章写得怎么样”
-- “给我后续剧情建议”
-- “分析后让后续改写器能接着改”
-
-agent 应默认执行完整分析闭环，而不是只给聊天建议：
-
-1. 识别输入文件（`.txt` / `.docx`）。
-2. 必要时把 `.docx` 转成 UTF-8 `.txt`。
-3. 跑 `--common-workflow` 生成原文包、证据包、RAG/记忆资料和新版编辑诊断提示词。
-4. 用 `editorial_revision_prompt.md` 调用 LLM 生成深度编辑报告。
-5. 验收报告是否包含 P0/P1/P2、逐章改写清单和后续路线。
-6. 最后只向用户报告核心结论和产物路径，不要把大段报告全文塞进聊天。
-
-### 输入要求
-
-- 推荐输入格式：UTF-8 `.txt`。
-- 如果用户给的是 `.docx`，先转换成 `.txt`，再交给框架。不要直接把 `.docx` 路径传给 `--txt-path`。
-- 外部小说必须显式传 `--txt-path`，不要依赖仓库默认 `.txt`。
-- `--focus-entity` 应填写当前小说真实角色名；不知道角色名时可以先不填，或先运行基础分析后查看 `entity_stats.json`。
-
-### 第一步：生成新版编辑诊断提示词
-
-```powershell
-python analyze_enhanced.py `
-  --txt-path "C:\path\to\你的小说.txt" `
-  --out-dir "C:\path\to\输出目录" `
-  --common-workflow `
-  --context-query "评价当前小说片段的优缺点，给出具体、尖锐、可直接改章节的修改建议和后续剧情路线" `
-  --focus-entity "主角名" `
-  --focus-entity "重要角色名" `
-  --source-start 1 `
-  --source-end 20 `
-  --context-max-items 160 `
-  --context-excerpt-chars 1400
-```
-
-如果是短篇或单个片段，`--source-end` 可以设为实际章节数；如果不确定章节数，可以先不填 `--source-start/--source-end`。
-
-关键输出：
-
-- `llm_source_pack_detailed.md`：保留原文段落和 `[CHxxx-Pxxx]` 证据编号。
-- `review_evidence_pack.json`：筛选出的证据包。
-- `editorial_revision_prompt.md`：新版深度编辑诊断提示词，优先使用这个文件。
-- `entity_stats.json`、`relation_triples.json`、`sentiment_arc.json`、`enhanced_briefs.json`：人物、关系、情绪和章节索引资料，可作为 RAG/记忆材料。
-
-### 可选：生成 RAG 索引和记忆摘要
-
-如果用户提到“RAG”“资料库”“后续持续分析”“给别的 agent 用”，再运行：
-
-```powershell
-python index_and_query_rag.py `
-  --txt-path "C:\path\to\你的小说.txt" `
-  --out-dir "C:\path\to\输出目录" `
-  --index
-```
-
-如果只是先生成轻量记忆摘要：
-
-```powershell
-python index_and_query_rag.py `
-  --txt-path "C:\path\to\你的小说.txt" `
-  --out-dir "C:\path\to\输出目录" `
-  --memory-only
-```
-
-RAG/记忆相关输出通常包括 `memory_summary.json` 和向量/检索索引文件。后续 agent 应优先读取这些文件，而不是重新猜测前文。
-
-### 第二步：调用 LLM 生成深度编辑报告
-
-如果 `.env` 或环境变量已配置 DeepSeek / OpenAI 兼容接口，直接调用框架：
-
-```powershell
-python analyze_enhanced.py `
-  --txt-path "C:\path\to\你的小说.txt" `
-  --out-dir "C:\path\to\输出目录" `
-  --llm-context-report `
-  --context-prompt "C:\path\to\输出目录\editorial_revision_prompt.md" `
-  --llm-output-name "editorial_revision_report.md"
-```
-
-合格报告应至少满足：
-
-- 有 `必须修（P0）`、`建议增强（P1）`、`保留但控制（P2）`。
-- 每个核心问题引用至少 2 个 `[CHxxx-Pxxx]` 证据编号。
-- 有“逐章改写清单”，明确章节/段落、改写动作、目标字数变化、给改写器的指令。
-- 有 5 条后续剧情路线，每条包含证据、风险、推荐写法和下一章钩子；短篇或单章也必须给满 5 条。
-- 报告末尾不应附加 JSON 或结构化摘要；这份文件是给人读的深度分析和预测报告。
-
-如果报告只有人物统计、情绪曲线和笼统建议，说明走错了旧流程；应改用 `editorial_revision_prompt.md` 重新调用 LLM。
-
-## 常用工作流：原文整理 + 评价改进 + 后续剧情
-
-如果目标是把原文整理成适合 LLM 深度分析的格式，并同时生成“评价、改进、后续剧情发展建议”的提示词，使用：
-
-```powershell
-python analyze_enhanced.py `
-  --common-workflow `
-  --context-query "评价陈默和秦思妍感情线的优缺点，并给出后续剧情发展建议" `
-  --focus-entity "陈默" `
-  --focus-entity "秦思妍" `
-  --source-start 1 `
-  --source-end 20
-```
-
-常用输出：
-
-- `llm_source_pack_detailed.md`：具体版原文输入包，保留章节、段落和原文内容，并给每段生成 `[CH001-P003]` 这类引用编号。
-- `llm_source_pack_manifest.json`：原文输入包索引，便于确认包含了哪些章节和段落。
-- `review_evidence_pack.json`：按问题和关注人物筛出来的证据包。
-- `review_improve_continue_prompt.md`：可直接交给 LLM 的提示词，要求输出总体评价、优点、问题、可执行改进和 3 条后续剧情路线。
-
-如果要限制输入包体积，可以加 `--source-max-chars`。例如只允许约 20 万字符：
-
-```powershell
-python analyze_enhanced.py `
-  --common-workflow `
-  --context-query "评价当前剧情并提出后续路线" `
-  --source-start 1 `
-  --source-end 80 `
-  --source-max-chars 200000
-```
-
-这个“具体版”不会把章节改写成简化摘要；预算不足时只会减少纳入的章节，并在输出里标记截断。
-
-如果已经配置了 DeepSeek / OpenAI 兼容接口，可以直接让模型读取上面的提示词生成报告：
-
-```powershell
-python analyze_enhanced.py `
-  --llm-context-report `
-  --context-prompt .\novel_analysis_enhanced\review_improve_continue_prompt.md `
-  --llm-output-name review_improve_continue_report.md
-```
-
-## 章节质量评估
-
-评估原书中的某一章：
-
-```powershell
-python analyze_enhanced.py --evaluate-chapter 1
-```
-
-评估外部输入章节：
-
-```powershell
-python analyze_enhanced.py --evaluate-file .\my_chapter.txt
-```
-
-如果配置了 OpenAI 兼容接口，也可以生成 LLM 编辑诊断：
-
-```powershell
-$env:OPENAI_API_KEY="你的 key"
-$env:OPENAI_BASE_URL="https://api.openai.com/v1"
-$env:OPENAI_MODEL="gpt-4o-mini"
-
-python analyze_enhanced.py --evaluate-file .\my_chapter.txt --llm-report
-```
-
-## 设计原则
-
-- 每个分析结论尽量绑定原文证据编号。
-- 没有证据时明确标记“证据不足”。
-- 先抽取证据，再做推断，避免空泛总结。
-- 大上下文窗口优先放高密度证据、人物索引和任务规则，而不是无差别全文。
+- 小说输入推荐使用 UTF-8 `.txt`；`.docx` 需要先转换为 `.txt`。
+- `--apply-aliases` 只适合仓库默认小说，外部小说通常不要启用。
+- 证据抽取和关系识别主要依赖规则、统计和检索，不能替代人工编辑判断。
+- LLM 输出质量取决于模型、上下文预算和提示词，不应在未运行验证时声称已生成最终报告。

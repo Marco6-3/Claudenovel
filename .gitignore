@@ -17,6 +17,7 @@ novel_inspiration_library/
 .agent-demo/
 .agent-writer-smoke/
 .tmp/
+AGENTS.md
 *.cache
 *.db-wal
 *.db-shm

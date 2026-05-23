@@ -107,3 +107,8 @@ novel.txt → normalizer → structure (Chapter/Scene/Dialogue)
 - `--apply-aliases` is for the repo's default novel only. External novels should omit it.
 - Editorial reports must contain P0/P1/P2 prioritization and `[CHxxx-Pxxx]` evidence references.
 - The JSON summary block at the end of editorial reports is machine-readable and consumed by `continuation_writer.py`.
+
+不要全量读取小说原文、下载目录、日志和生成稿。
+默认只读取摘要、人物状态、当前任务文件。
+需要读取原文时，只读取用户指定的章节范围。
+爬虫任务只检查少量日志和状态，不扫描全部下载内容。

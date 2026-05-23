@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
+from novel_parser.output_layout import build_organized_output, write_main_report
 from novel_parser.pipeline import run_pipeline
 
 
@@ -36,8 +37,8 @@ def main() -> None:
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=OUT,
-        help="Output directory. Defaults to novel_analysis_enhanced.",
+        default=None,
+        help="Output directory. Defaults to novel_analysis_enhanced, or a task folder when --organized-output is used.",
     )
     parser.add_argument(
         "--txt-path",
@@ -149,12 +150,20 @@ def main() -> None:
         default="llm_context_report.md",
         help="Output filename for --llm-context-report.",
     )
+    parser.add_argument(
+        "--organized-output",
+        action="store_true",
+        help="Use task-root/report.md plus task-root/data/ for generated base data.",
+    )
     args = parser.parse_args()
     apply_aliases = args.txt_path.resolve() == TXT.resolve()
+    task_name = args.context_query or args.output_name or "小说分析"
+    layout = build_organized_output(args.txt_path, task_name, args.out_dir) if args.organized_output else None
+    output_dir = layout.data_dir if layout else (args.out_dir or OUT)
 
     result = run_pipeline(
         args.txt_path,
-        args.out_dir,
+        output_dir,
         use_jieba=args.use_jieba,
         jieba_chapter_limit=args.jieba_chapter_limit,
         use_jieba_cache=args.jieba_cache,
@@ -178,17 +187,63 @@ def main() -> None:
     if args.llm_context_report:
         from novel_parser import llm_client
 
-        prompt_path = args.context_prompt or (args.out_dir / "llm_context_prompt.md")
+        prompt_path = args.context_prompt or (output_dir / "llm_context_prompt.md")
         prompt_text = prompt_path.read_text(encoding="utf-8")
         content, model = llm_client.generate_context_report(prompt_text)
-        out_path = args.out_dir / args.llm_output_name
+        out_path = layout.report_path if layout else (output_dir / args.llm_output_name)
         out_path.write_text(
             f"# LLM 证据化分析报告\n\n> 模型：{model}\n> 输入提示词：{prompt_path}\n\n{content}\n",
             encoding="utf-8",
         )
         result["llm_context_report"] = str(out_path)
         result["llm_context_model"] = model
+    elif layout:
+        write_main_report(
+            layout,
+            "小说分析任务报告",
+            _render_organized_pipeline_report(result),
+            data_dir_label="data",
+        )
     print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def _render_organized_pipeline_report(result: dict) -> str:
+    lines = [
+        "## 任务概况\n\n",
+        f"- 文件：{result.get('file')}\n",
+        f"- 字数：{result.get('chars')}\n",
+        f"- 章节数：{result.get('chapters')}\n",
+        f"- 场景数：{result.get('total_scenes')}\n",
+        f"- 对话数：{result.get('total_dialogues')}\n\n",
+        "## 主要产物\n\n",
+    ]
+    common_output = result.get("common_output") or {}
+    context_output = result.get("context_output") or {}
+    if common_output:
+        lines.extend(
+            [
+                f"- 原文输入包：`data/{common_output.get('source_pack')}`\n",
+                f"- 编辑诊断提示词：`data/{common_output.get('editorial_revision_prompt')}`\n",
+                f"- 证据包：`data/{common_output.get('review_evidence_pack')}`\n",
+            ]
+        )
+    if context_output:
+        lines.extend(
+            [
+                f"- 上下文提示词：`data/{context_output.get('prompt_output')}`\n",
+                f"- 上下文证据包：`data/{context_output.get('evidence_output')}`\n",
+            ]
+        )
+    if result.get("evaluation_output"):
+        lines.append(f"- 评价报告：`data/{result.get('evaluation_output')}`\n")
+    lines.extend(
+        [
+            "\n## 说明\n\n",
+            "本文件是任务入口报告；底座生成的结构化数据、证据包、提示词和缓存统一放在 `data/` 目录。\n",
+            "如果需要最终自然语言深度报告，请在同一任务目录下运行 LLM 报告命令，或使用深度问答入口生成指定问题报告。\n",
+        ]
+    )
+    return "".join(lines)
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ def run_pipeline(
     apply_aliases: bool = True,
 ) -> dict:
     """Run the full enhanced analysis pipeline."""
-    out_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Read & normalize
     raw_text = normalizer.read_text(txt_path)
