@@ -161,6 +161,29 @@ python -X utf8 agent_writer_cli.py compare-memory-variants --chapter 1
 python -X utf8 -m pytest tests/test_agent_writer_pipeline.py::test_full_author_memory_smoke_no_llm -v
 ```
 
+## 推荐日常使用顺序
+
+每章完整闭环：
+
+1. `plan` — 规划章节合同
+2. `write` 或 `generate` — 导入草稿或调 LLM 生成
+3. `review` — 质量门禁
+4. `commit --approve` — 人工确认提交
+5. `draft-author-note` — 从分析产物生成决策候选
+6. `discuss` — 生成作者协商包（已嵌入候选）
+7. `record-author-note` — 作者确认决策
+8. `handoff` — 生成交接包
+9. `plan-next` — 规划下一章（自动加载交接 + 决策）
+10. `evaluate-workflow` — 验证工作流完整性
+11. `compare-memory-variants` — 比较记忆增量
+
+评估/诊断命令（随时可用）：
+- `evaluate-workflow`：检查证据传播、禁区检查、payoff 兑现
+- `compare-memory-variants`：查看各记忆层级带来的约束差异
+- `status`：查看项目整体进度
+- `index-report`：查看 SQLite 索引和 blocking issues
+- `python scripts/check_plugin_drift.py`：检查插件文档漂移
+
 ## 状态与索引
 
 每个书项目会生成：
