@@ -2,7 +2,9 @@
 
 from .pipeline import (
     commit_chapter,
+    compare_memory_variants,
     draft_author_note,
+    evaluate_workflow,
     generate_discussion_packet,
     generate_draft,
     generate_handoff,
@@ -20,7 +22,9 @@ from .pipeline import (
 
 __all__ = [
     "commit_chapter",
+    "compare_memory_variants",
     "draft_author_note",
+    "evaluate_workflow",
     "generate_discussion_packet",
     "generate_draft",
     "generate_handoff",

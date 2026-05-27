@@ -7,7 +7,9 @@ from pathlib import Path
 from .experiment import run_experiment
 from .pipeline import (
     commit_chapter,
+    compare_memory_variants,
     draft_author_note,
+    evaluate_workflow,
     generate_discussion_packet,
     generate_draft,
     generate_handoff,
@@ -111,6 +113,12 @@ def build_parser() -> argparse.ArgumentParser:
     experiment.add_argument("--variants", nargs="+", default=["A", "B", "C", "D"])
     experiment.add_argument("--temperature", type=float, default=0.7)
     experiment.add_argument("--max-tokens", type=int, default=2200)
+
+    eval_wf = sub.add_parser("evaluate-workflow", help="evaluate author-memory workflow for a chapter")
+    eval_wf.add_argument("--chapter", type=int, required=True)
+
+    compare = sub.add_parser("compare-memory-variants", help="compare memory variant contents for a chapter")
+    compare.add_argument("--chapter", type=int, required=True)
 
     return parser
 
@@ -237,6 +245,12 @@ def main(argv: list[str] | None = None) -> int:
                 max_tokens=args.max_tokens,
             )
         )
+        return 0
+    if args.command == "evaluate-workflow":
+        _print_json(evaluate_workflow(root, chapter_number=args.chapter))
+        return 0
+    if args.command == "compare-memory-variants":
+        _print_json(compare_memory_variants(root, chapter_number=args.chapter))
         return 0
 
     parser.error(f"unknown command: {args.command}")

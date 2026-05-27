@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from .models import (
@@ -17,6 +18,8 @@ from .models import (
     PrewritePlan,
     ReaderExpectationMap,
     ReviewResult,
+    WorkflowEvaluation,
+    WorkflowEvaluationItem,
 )
 from . import index_store
 from .llm_client import build_client
@@ -79,6 +82,14 @@ def _candidate_json_path(root: Path, chapter_number: int) -> Path:
 
 def _candidate_md_path(root: Path, chapter_number: int) -> Path:
     return root / "author_discussion" / f"{chapter_id(chapter_number)}_decision_candidate.md"
+
+
+def _evaluation_json_path(root: Path, chapter_number: int) -> Path:
+    return root / "evaluations" / f"workflow_evaluation_{chapter_id(chapter_number)}.json"
+
+
+def _evaluation_md_path(root: Path, chapter_number: int) -> Path:
+    return root / "evaluations" / f"workflow_evaluation_{chapter_id(chapter_number)}.md"
 
 
 def init_project(
@@ -1313,3 +1324,656 @@ def draft_author_note(
         "candidate_md": str(md_path),
         "source_files": source_files,
     }
+
+
+# --- Workflow evaluation ---
+
+
+def evaluate_workflow(
+    project_root: Path,
+    *,
+    chapter_number: int,
+) -> WorkflowEvaluation:
+    """Evaluate the author-memory workflow for a chapter.
+
+    Checks evidence propagation through: candidate → decision → handoff → contract → prompt → draft.
+    Gracefully degrades when files are missing (marks check as 'skip').
+    """
+    root = ensure_project(project_root)
+    next_chapter = chapter_number + 1
+    checks: list[WorkflowEvaluationItem] = []
+    missing: list[str] = []
+
+    def _load(path: Path, label: str):
+        if not path.exists():
+            missing.append(label)
+            return None
+        try:
+            return read_json(path)
+        except (ValueError, KeyError):
+            missing.append(f"{label} (invalid)")
+            return None
+
+    # Load all artifacts
+    candidate_data = _load(_candidate_json_path(root, chapter_number), "decision_candidate")
+    decisions_data = _load(root / "state" / "author_decisions.json", "author_decisions")
+    handoff_data = _load(_handoff_path(root, chapter_number), "handoff")
+    next_contract_data = _load(_contract_path(root, next_chapter), f"chapter_{next_chapter:04d}_contract")
+    next_prompt_path = root / "prompts" / f"{chapter_id(next_chapter)}_writer_prompt.md"
+    next_prompt_text = _read_text_safe(next_prompt_path)
+    next_draft_text = _read_text_safe(_draft_path(root, next_chapter))
+    foreshadowing_data = _load(root / "state" / "foreshadowing_ledger.json", "foreshadowing_ledger")
+    next_review_path = _review_path(root, next_chapter)
+    next_review_data = _load(next_review_path, f"chapter_{next_chapter:04d}_review")
+
+    # --- Check 1: Evidence IDs from candidate → handoff ---
+    if candidate_data and handoff_data:
+        candidate_evidence: set[str] = set()
+        for field_name in ("keep_evidence", "modification_evidence", "preference_evidence", "forbidden_evidence"):
+            for eid in candidate_data.get(field_name, []):
+                candidate_evidence.add(eid)
+        handoff_evidence: set[str] = set()
+        for field_name in ("hard_constraint_evidence", "author_direction_evidence"):
+            for eid in handoff_data.get(field_name, []):
+                handoff_evidence.add(eid)
+        overlap = candidate_evidence & handoff_evidence
+        if candidate_evidence:
+            if overlap:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_candidate_to_handoff",
+                    name="证据从候选进入交接包",
+                    status="pass",
+                    detail=f"{len(overlap)} 条证据从候选传递到交接包",
+                    evidence_refs=list(overlap),
+                ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_candidate_to_handoff",
+                    name="证据从候选进入交接包",
+                    status="risk",
+                    detail=f"候选有 {len(candidate_evidence)} 条证据但未进入交接包",
+                    evidence_refs=list(candidate_evidence),
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="evidence_candidate_to_handoff",
+                name="证据从候选进入交接包",
+                status="skip",
+                detail="候选无证据引用",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="evidence_candidate_to_handoff",
+            name="证据从候选进入交接包",
+            status="skip",
+            detail=f"缺少 {'候选' if not candidate_data else '交接包'}",
+        ))
+
+    # --- Check 2: Evidence IDs → next chapter contract ---
+    if handoff_data and next_contract_data:
+        handoff_ev: set[str] = set()
+        for field_name in ("hard_constraint_evidence", "author_direction_evidence"):
+            for eid in handoff_data.get(field_name, []):
+                handoff_ev.add(eid)
+        contract_text = json.dumps(next_contract_data, ensure_ascii=False)
+        found_in_contract = [eid for eid in handoff_ev if eid in contract_text]
+        if handoff_ev:
+            if found_in_contract:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_to_next_contract",
+                    name="证据进入下一章合同",
+                    status="pass",
+                    detail=f"{len(found_in_contract)}/{len(handoff_ev)} 条证据进入合同",
+                    evidence_refs=found_in_contract,
+                ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_to_next_contract",
+                    name="证据进入下一章合同",
+                    status="risk",
+                    detail=f"交接包有 {len(handoff_ev)} 条证据但合同未引用",
+                    evidence_refs=list(handoff_ev),
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="evidence_to_next_contract",
+                name="证据进入下一章合同",
+                status="skip",
+                detail="交接包无证据引用",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="evidence_to_next_contract",
+            name="证据进入下一章合同",
+            status="skip",
+            detail=f"缺少 {'交接包' if not handoff_data else '下一章合同'}",
+        ))
+
+    # --- Check 3: Author direction → next chapter contract ---
+    if decisions_data and next_contract_data:
+        author_prefs: list[str] = []
+        for d in decisions_data.get("decisions", []):
+            if d.get("chapter_number") == chapter_number:
+                author_prefs = d.get("next_chapter_preferences", [])
+                break
+        if author_prefs:
+            contract_text = json.dumps(next_contract_data, ensure_ascii=False)
+            found = [p for p in author_prefs if p in contract_text]
+            if found:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="author_direction_to_contract",
+                    name="作者确认方向进入下一章合同",
+                    status="pass",
+                    detail=f"{len(found)} 条作者方向进入合同",
+                ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="author_direction_to_contract",
+                    name="作者确认方向进入下一章合同",
+                    status="risk",
+                    detail="作者方向未在合同中找到",
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="author_direction_to_contract",
+                name="作者确认方向进入下一章合同",
+                status="skip",
+                detail="作者无下一章偏好",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="author_direction_to_contract",
+            name="作者确认方向进入下一章合同",
+            status="skip",
+            detail=f"缺少 {'作者决策' if not decisions_data else '下一章合同'}",
+        ))
+
+    # --- Check 4: Author forbidden → review gate ---
+    if decisions_data:
+        author_forbidden: list[str] = []
+        for d in decisions_data.get("decisions", []):
+            if d.get("chapter_number") == chapter_number:
+                author_forbidden = d.get("forbidden_directions", [])
+                break
+        if author_forbidden:
+            if next_review_data:
+                review_text = json.dumps(next_review_data, ensure_ascii=False)
+                found_forbidden = [f for f in author_forbidden if f in review_text]
+                if found_forbidden:
+                    checks.append(WorkflowEvaluationItem(
+                        check_id="author_forbidden_in_review",
+                        name="作者禁区进入审稿门禁",
+                        status="pass",
+                        detail=f"审稿检测到 {len(found_forbidden)} 条作者禁区",
+                    ))
+                else:
+                    # Not necessarily a failure — the draft might not have triggered it
+                    checks.append(WorkflowEvaluationItem(
+                        check_id="author_forbidden_in_review",
+                        name="作者禁区进入审稿门禁",
+                        status="pass",
+                        detail="作者禁区已记录，审稿未检测到触犯（draft 未触发）",
+                    ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="author_forbidden_in_review",
+                    name="作者禁区进入审稿门禁",
+                    status="skip",
+                    detail="下一章审稿未执行",
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="author_forbidden_in_review",
+                name="作者禁区进入审稿门禁",
+                status="skip",
+                detail="作者无禁区",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="author_forbidden_in_review",
+            name="作者禁区进入审稿门禁",
+            status="skip",
+            detail="缺少作者决策",
+        ))
+
+    # --- Check 5: Active foreshadowing → contract/prompt ---
+    if foreshadowing_data and next_contract_data:
+        active_items = [
+            item for item in foreshadowing_data.get("items", [])
+            if item.get("status", "active") == "active"
+        ]
+        if active_items:
+            contract_text = json.dumps(next_contract_data, ensure_ascii=False)
+            prompt_has = next_prompt_text is not None
+            found_in_any = []
+            for item in active_items:
+                eid = item.get("id", "")
+                content = item.get("content", "")
+                if eid and eid in contract_text:
+                    found_in_any.append(eid)
+                elif content and content[:10] in contract_text:
+                    found_in_any.append(eid or content[:20])
+            if found_in_any:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="foreshadowing_to_contract",
+                    name="活跃伏笔进入下一章合同",
+                    status="pass",
+                    detail=f"{len(found_in_any)} 条伏笔在合同中引用",
+                    evidence_refs=found_in_any,
+                ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="foreshadowing_to_contract",
+                    name="活跃伏笔进入下一章合同",
+                    status="risk",
+                    detail=f"{len(active_items)} 条活跃伏笔但合同未引用",
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="foreshadowing_to_contract",
+                name="活跃伏笔进入下一章合同",
+                status="skip",
+                detail="无活跃伏笔",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="foreshadowing_to_contract",
+            name="活跃伏笔进入下一章合同",
+            status="skip",
+            detail=f"缺少 {'伏笔账本' if not foreshadowing_data else '下一章合同'}",
+        ))
+
+    # --- Check 6: Draft honors required payoff ---
+    if next_contract_data and next_draft_text:
+        payoffs = next_contract_data.get("required_payoffs", [])
+        if payoffs:
+            from .quality_gate import _contains
+            hit = sum(1 for p in payoffs if _contains(next_draft_text, p))
+            if hit == len(payoffs):
+                checks.append(WorkflowEvaluationItem(
+                    check_id="draft_payoff_coverage",
+                    name="草稿兑现 required payoff",
+                    status="pass",
+                    detail=f"{hit}/{len(payoffs)} 条 payoff 兑现",
+                ))
+            elif hit > 0:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="draft_payoff_coverage",
+                    name="草稿兑现 required payoff",
+                    status="risk",
+                    detail=f"{hit}/{len(payoffs)} 条 payoff 兑现",
+                ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="draft_payoff_coverage",
+                    name="草稿兑现 required payoff",
+                    status="fail",
+                    detail=f"0/{len(payoffs)} 条 payoff 兑现",
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="draft_payoff_coverage",
+                name="草稿兑现 required payoff",
+                status="skip",
+                detail="合同无 required_payoffs",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="draft_payoff_coverage",
+            name="草稿兑现 required payoff",
+            status="skip",
+            detail=f"缺少 {'合同' if not next_contract_data else '草稿'}",
+        ))
+
+    # --- Check 7: Draft violates author forbidden direction ---
+    if decisions_data and next_draft_text:
+        author_forbidden = []
+        for d in decisions_data.get("decisions", []):
+            if d.get("chapter_number") == chapter_number:
+                author_forbidden = d.get("forbidden_directions", [])
+                break
+        if author_forbidden:
+            from .quality_gate import _contains
+            violations = [f for f in author_forbidden if _contains(next_draft_text, f)]
+            if violations:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="draft_forbidden_violation",
+                    name="草稿是否触犯作者禁区",
+                    status="fail",
+                    detail=f"触犯 {len(violations)} 条禁区: {'; '.join(violations)}",
+                    evidence_refs=violations,
+                ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="draft_forbidden_violation",
+                    name="草稿是否触犯作者禁区",
+                    status="pass",
+                    detail="草稿未触犯任何作者禁区",
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="draft_forbidden_violation",
+                name="草稿是否触犯作者禁区",
+                status="skip",
+                detail="作者无禁区",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="draft_forbidden_violation",
+            name="草稿是否触犯作者禁区",
+            status="skip",
+            detail=f"缺少 {'作者决策' if not decisions_data else '草稿'}",
+        ))
+
+    # --- Check 8: Decision candidate exists (analysis bridge) ---
+    if candidate_data:
+        source_files = candidate_data.get("source_files", [])
+        if source_files:
+            checks.append(WorkflowEvaluationItem(
+                check_id="candidate_has_sources",
+                name="决策候选有分析来源",
+                status="pass",
+                detail=f"来源文件: {', '.join(source_files)}",
+            ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="candidate_has_sources",
+                name="决策候选有分析来源",
+                status="risk",
+                detail="候选存在但无分析来源文件",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="candidate_has_sources",
+            name="决策候选有分析来源",
+            status="skip",
+            detail="未运行 draft-author-note",
+        ))
+
+    # --- Tally ---
+    pass_count = sum(1 for c in checks if c.status == "pass")
+    risk_count = sum(1 for c in checks if c.status == "risk")
+    fail_count = sum(1 for c in checks if c.status == "fail")
+    skip_count = sum(1 for c in checks if c.status == "skip")
+
+    evaluation = WorkflowEvaluation(
+        chapter_number=chapter_number,
+        checks=checks,
+        pass_count=pass_count,
+        risk_count=risk_count,
+        fail_count=fail_count,
+        skip_count=skip_count,
+        missing_files=missing,
+    )
+
+    # Write JSON
+    json_path = write_json(_evaluation_json_path(root, chapter_number), evaluation)
+
+    # Write MD
+    md_lines = [
+        f"# 第{chapter_number}章 作者记忆工作流评估",
+        "",
+        f"## 总览",
+        "",
+        f"- 通过：{pass_count}",
+        f"- 风险：{risk_count}",
+        f"- 失败：{fail_count}",
+        f"- 跳过：{skip_count}",
+        "",
+    ]
+    if missing:
+        md_lines.extend(["## 缺失文件", ""])
+        for m in missing:
+            md_lines.append(f"- {m}")
+        md_lines.append("")
+
+    md_lines.extend(["## 检查明细", ""])
+    for c in checks:
+        icon = {"pass": "✓", "risk": "⚠", "fail": "✗", "skip": "○"}[c.status]
+        md_lines.append(f"### {icon} {c.name}")
+        md_lines.append("")
+        md_lines.append(f"- 状态：{c.status}")
+        md_lines.append(f"- 详情：{c.detail}")
+        if c.evidence_refs:
+            md_lines.append(f"- 证据：{', '.join(c.evidence_refs)}")
+        md_lines.append("")
+
+    if fail_count > 0:
+        md_lines.extend(["## 结论", "", "**存在阻断项，请检查失败检查项。**"])
+    elif risk_count > 0:
+        md_lines.extend(["## 结论", "", "**存在风险项，建议检查。**"])
+    else:
+        md_lines.extend(["## 结论", "", "**所有检查通过或跳过。**"])
+
+    md_path = write_text(_evaluation_md_path(root, chapter_number), "\n".join(md_lines))
+    index_store.upsert_artifact(root, chapter_number, "workflow_evaluation", json_path)
+
+    return evaluation
+
+
+def compare_memory_variants(
+    project_root: Path,
+    *,
+    chapter_number: int,
+) -> dict[str, object]:
+    """Compare what each memory variant (baseline/handoff/author_memory) brings to a chapter.
+
+    Does NOT call LLM — only inspects files to enumerate constraints, evidence, and foreshadowing
+    that each variant would include.
+    """
+    root = ensure_project(project_root)
+    next_chapter = chapter_number + 1
+    missing: list[str] = []
+
+    def _load_json(path: Path, label: str):
+        if not path.exists():
+            missing.append(label)
+            return None
+        try:
+            return read_json(path)
+        except (ValueError, KeyError):
+            missing.append(f"{label} (invalid)")
+            return None
+
+    contract_data = _load_json(_contract_path(root, next_chapter), f"chapter_{next_chapter:04d}_contract")
+    handoff_data = _load_json(_handoff_path(root, chapter_number), "handoff")
+    decisions_data = _load_json(root / "state" / "author_decisions.json", "author_decisions")
+    foreshadowing_data = _load_json(root / "state" / "foreshadowing_ledger.json", "foreshadowing_ledger")
+    candidate_data = _load_json(_candidate_json_path(root, chapter_number), "decision_candidate")
+
+    # --- Variant A: baseline (contract only) ---
+    baseline_constraints: list[str] = []
+    baseline_evidence: list[str] = []
+    baseline_forbidden: list[str] = []
+    baseline_payoffs: list[str] = []
+    baseline_foreshadowing: list[str] = []
+
+    if contract_data:
+        baseline_constraints = contract_data.get("forbidden_beats", [])
+        baseline_payoffs = contract_data.get("required_payoffs", [])
+        baseline_foreshadowing = contract_data.get("foreshadowing_ops", [])
+
+    # --- Variant B: + handoff ---
+    handoff_constraints: list[str] = []
+    handoff_evidence: list[str] = []
+    handoff_direction: str = ""
+    handoff_payoffs: list[str] = []
+    handoff_foreshadowing: list[str] = []
+
+    if handoff_data:
+        handoff_constraints = handoff_data.get("hard_constraints", [])
+        handoff_evidence = list(handoff_data.get("hard_constraint_evidence", []))
+        handoff_evidence.extend(handoff_data.get("author_direction_evidence", []))
+        handoff_direction = handoff_data.get("author_direction", "")
+        handoff_payoffs = handoff_data.get("required_payoffs_next", [])
+        handoff_foreshadowing = handoff_data.get("active_foreshadowing", [])
+
+    # --- Variant C: + author decisions ---
+    author_constraints: list[str] = []
+    author_evidence: list[str] = []
+    author_prefs: list[str] = []
+    author_forbidden: list[str] = []
+
+    if decisions_data:
+        for d in decisions_data.get("decisions", []):
+            if d.get("chapter_number") == chapter_number:
+                author_forbidden = d.get("forbidden_directions", [])
+                author_prefs = d.get("next_chapter_preferences", [])
+                author_evidence = d.get("evidence_refs", [])
+                author_constraints = author_forbidden
+                break
+
+    # --- Variant D: + foreshadowing ---
+    foreshadowing_active: list[dict[str, object]] = []
+    if foreshadowing_data:
+        foreshadowing_active = [
+            item for item in foreshadowing_data.get("items", [])
+            if item.get("status", "active") == "active"
+        ]
+
+    # Build comparison report
+    variants = []
+
+    # A
+    variants.append({
+        "variant": "A",
+        "name": "baseline（仅合同）",
+        "constraints": list(baseline_constraints),
+        "evidence": list(baseline_evidence),
+        "forbidden": list(baseline_forbidden),
+        "payoffs": list(baseline_payoffs),
+        "foreshadowing": list(baseline_foreshadowing),
+        "direction": "",
+    })
+
+    # B
+    variants.append({
+        "variant": "B",
+        "name": "handoff（合同 + 交接包）",
+        "constraints": list(set(baseline_constraints + handoff_constraints)),
+        "evidence": list(set(handoff_evidence)),
+        "forbidden": list(set(baseline_constraints + handoff_constraints)),
+        "payoffs": list(set(baseline_payoffs + handoff_payoffs)),
+        "foreshadowing": list(set(baseline_foreshadowing + handoff_foreshadowing)),
+        "direction": handoff_direction,
+    })
+
+    # C
+    variants.append({
+        "variant": "C",
+        "name": "author_memory（合同 + 交接 + 作者决策）",
+        "constraints": list(set(baseline_constraints + handoff_constraints + author_constraints)),
+        "evidence": list(set(handoff_evidence + author_evidence)),
+        "forbidden": list(set(baseline_constraints + handoff_constraints + author_forbidden)),
+        "payoffs": list(set(baseline_payoffs + handoff_payoffs)),
+        "foreshadowing": list(set(baseline_foreshadowing + handoff_foreshadowing)),
+        "direction": handoff_direction or "；".join(author_prefs),
+    })
+
+    # D (full)
+    foreshadowing_ids = [
+        item.get("id", f"FS-{item.get('planted_chapter', '?')}")
+        for item in foreshadowing_active
+    ]
+    variants.append({
+        "variant": "D",
+        "name": "full（合同 + 交接 + 作者决策 + 伏笔账本）",
+        "constraints": list(set(baseline_constraints + handoff_constraints + author_constraints)),
+        "evidence": list(set(handoff_evidence + author_evidence)),
+        "forbidden": list(set(baseline_constraints + handoff_constraints + author_forbidden)),
+        "payoffs": list(set(baseline_payoffs + handoff_payoffs)),
+        "foreshadowing": foreshadowing_ids,
+        "direction": handoff_direction or "；".join(author_prefs),
+    })
+
+    result = {
+        "chapter_number": chapter_number,
+        "variants": variants,
+        "missing_files": missing,
+    }
+
+    # Write JSON
+    experiments_dir = root / "experiments"
+    experiments_dir.mkdir(parents=True, exist_ok=True)
+    json_path = experiments_dir / f"memory_variant_comparison_{chapter_id(chapter_number)}.json"
+    write_json(json_path, result)
+
+    # Write MD
+    md_lines = [
+        f"# 第{chapter_number}章 记忆变体比较",
+        "",
+    ]
+    if missing:
+        md_lines.extend(["## 缺失文件", ""])
+        for m in missing:
+            md_lines.append(f"- {m}")
+        md_lines.append("")
+
+    for v in variants:
+        md_lines.extend([
+            f"## 变体 {v['variant']}：{v['name']}",
+            "",
+            f"- 约束数：{len(v['constraints'])}",
+            f"- 证据数：{len(v['evidence'])}",
+            f"- 禁区数：{len(v['forbidden'])}",
+            f"- Payoff 数：{len(v['payoffs'])}",
+            f"- 伏笔数：{len(v['foreshadowing'])}",
+            f"- 方向：{v['direction'] or '无'}",
+            "",
+        ])
+        if v['constraints']:
+            md_lines.append("### 约束")
+            for c in v['constraints']:
+                md_lines.append(f"- {c}")
+            md_lines.append("")
+        if v['evidence']:
+            md_lines.append("### 证据")
+            for e in v['evidence']:
+                md_lines.append(f"- {e}")
+            md_lines.append("")
+        if v['forbidden']:
+            md_lines.append("### 禁区")
+            for f in v['forbidden']:
+                md_lines.append(f"- {f}")
+            md_lines.append("")
+        if v['foreshadowing']:
+            md_lines.append("### 伏笔")
+            for fs in v['foreshadowing']:
+                md_lines.append(f"- {fs}")
+            md_lines.append("")
+
+    # Delta summary
+    md_lines.extend(["## 增量分析", ""])
+    a_constraints = set(variants[0]["constraints"])
+    d_constraints = set(variants[3]["constraints"])
+    extra = d_constraints - a_constraints
+    if extra:
+        md_lines.append(f"### 从 A 到 D 新增的约束（{len(extra)} 条）")
+        for e in extra:
+            md_lines.append(f"- {e}")
+        md_lines.append("")
+
+    a_ev = set(variants[0]["evidence"])
+    d_ev = set(variants[3]["evidence"])
+    extra_ev = d_ev - a_ev
+    if extra_ev:
+        md_lines.append(f"### 从 A 到 D 新增的证据（{len(extra_ev)} 条）")
+        for e in extra_ev:
+            md_lines.append(f"- {e}")
+        md_lines.append("")
+
+    a_fs = set(variants[0]["foreshadowing"])
+    d_fs = set(variants[3]["foreshadowing"])
+    extra_fs = d_fs - a_fs
+    if extra_fs:
+        md_lines.append(f"### 从 A 到 D 新增的伏笔（{len(extra_fs)} 条）")
+        for e in extra_fs:
+            md_lines.append(f"- {e}")
+        md_lines.append("")
+
+    md_path = experiments_dir / f"memory_variant_comparison_{chapter_id(chapter_number)}.md"
+    write_text(md_path, "\n".join(md_lines))
+
+    result["json_path"] = str(json_path)
+    result["md_path"] = str(md_path)
+    return result

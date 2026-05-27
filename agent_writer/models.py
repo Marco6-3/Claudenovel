@@ -212,3 +212,24 @@ class DecisionCandidate(StrictModel):
     notes: str = ""
     source_files: list[str] = Field(default_factory=list)
     generated_at: str = Field(default_factory=utc_now_iso)
+
+
+class WorkflowEvaluationItem(StrictModel):
+    """A single check result in a workflow evaluation."""
+    check_id: str
+    name: str
+    status: Literal["pass", "risk", "fail", "skip"]
+    detail: str = ""
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
+class WorkflowEvaluation(StrictModel):
+    """Full evaluation of the author-memory workflow for a chapter."""
+    chapter_number: int
+    checks: list[WorkflowEvaluationItem] = Field(default_factory=list)
+    pass_count: int = 0
+    risk_count: int = 0
+    fail_count: int = 0
+    skip_count: int = 0
+    missing_files: list[str] = Field(default_factory=list)
+    evaluated_at: str = Field(default_factory=utc_now_iso)

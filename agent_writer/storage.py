@@ -22,6 +22,8 @@ DIRS = (
     "state",
     "author_discussion",
     "handoffs",
+    "evaluations",
+    "experiments",
 )
 
 

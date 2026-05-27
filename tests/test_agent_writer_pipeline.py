@@ -7,7 +7,9 @@ import pytest
 
 from agent_writer.pipeline import (
     commit_chapter,
+    compare_memory_variants,
     draft_author_note,
+    evaluate_workflow,
     generate_discussion_packet,
     generate_draft,
     generate_handoff,
@@ -859,3 +861,220 @@ def test_draft_author_note_full_pipeline_smoke(tmp_path: Path) -> None:
     )
     all_text = json.dumps(contract.model_dump(mode="json"), ensure_ascii=False)
     assert "CH001" in all_text
+
+
+# --- Workflow evaluation tests ---
+
+
+def _full_pipeline_ch1_to_ch2(root: Path, tmp_path: Path) -> None:
+    """Helper: complete pipeline from ch1 commit through ch2 plan with author decisions."""
+    _commit_chapter_1(root)
+
+    # Generate analysis dir and candidate
+    analysis_dir = _make_analysis_dir(tmp_path)
+    draft_author_note(root, chapter_number=1, analysis_dir=analysis_dir)
+
+    # Author confirms with evidence
+    candidate = json.loads(
+        (root / "author_discussion" / "chapter_0001_decision_candidate.json").read_text(encoding="utf-8")
+    )
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "keep_chapter": True,
+                "keep_reason": candidate["keep_reason"],
+                "next_chapter_preferences": ["延续旧楼调查"],
+                "forbidden_directions": ["不能突然表白"],
+                "evidence_refs": candidate["keep_evidence"][:2],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+    # Handoff
+    generate_handoff(root, chapter_number=1)
+
+    # Plan ch2
+    plan_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+        characters=["秦思妍"],
+    )
+
+    # Write ch2 draft
+    draft = root / "drafts" / "chapter_0002_draft.md"
+    draft.write_text(
+        "陈默在档案室发现空座名单。\n\n名单最后一行被新墨水改写。",
+        encoding="utf-8",
+    )
+    review_chapter(root, chapter_number=2)
+
+
+def test_evaluate_workflow_full_pipeline_pass(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _full_pipeline_ch1_to_ch2(root, tmp_path)
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    assert evaluation.chapter_number == 1
+    assert evaluation.fail_count == 0
+    assert evaluation.pass_count > 0
+    assert (root / "evaluations" / "workflow_evaluation_chapter_0001.json").exists()
+    assert (root / "evaluations" / "workflow_evaluation_chapter_0001.md").exists()
+
+    # Check that evidence propagation was verified
+    check_ids = {c.check_id for c in evaluation.checks}
+    assert "evidence_candidate_to_handoff" in check_ids
+    assert "evidence_to_next_contract" in check_ids
+    assert "author_direction_to_contract" in check_ids
+    assert "draft_payoff_coverage" in check_ids
+    assert "draft_forbidden_violation" in check_ids
+
+
+def test_evaluate_workflow_missing_files_degrade(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # No candidate, no handoff, no ch2 — should skip, not crash
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    assert evaluation.chapter_number == 1
+    assert evaluation.fail_count == 0
+    assert evaluation.skip_count > 0
+    assert len(evaluation.missing_files) > 0
+
+
+def test_evaluate_workflow_detects_forbidden_violation(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record forbidden direction
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "forbidden_directions": ["突然表白"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+    # Plan ch2 and write draft that violates
+    plan_chapter(
+        root,
+        chapter_number=2,
+        title="测试章",
+        goal="测试",
+        required_payoffs=["测试payoff"],
+        ending_hook="测试钩子",
+    )
+    draft = root / "drafts" / "chapter_0002_draft.md"
+    draft.write_text("秦思妍突然表白。\n\n测试payoff。\n\n测试钩子", encoding="utf-8")
+    review_chapter(root, chapter_number=2)
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    forbidden_check = [c for c in evaluation.checks if c.check_id == "draft_forbidden_violation"]
+    assert len(forbidden_check) == 1
+    assert forbidden_check[0].status == "fail"
+
+
+def test_evaluate_workflow_evidence_propagation(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _full_pipeline_ch1_to_ch2(root, tmp_path)
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    # The evidence_candidate_to_handoff check should pass
+    ev_check = [c for c in evaluation.checks if c.check_id == "evidence_candidate_to_handoff"]
+    assert len(ev_check) == 1
+    assert ev_check[0].status == "pass"
+    assert len(ev_check[0].evidence_refs) > 0
+
+
+def test_evaluate_workflow_draft_payoff(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _full_pipeline_ch1_to_ch2(root, tmp_path)
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    payoff_check = [c for c in evaluation.checks if c.check_id == "draft_payoff_coverage"]
+    assert len(payoff_check) == 1
+    assert payoff_check[0].status == "pass"
+
+
+def test_evaluate_workflow_candidate_has_sources(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _full_pipeline_ch1_to_ch2(root, tmp_path)
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    sources_check = [c for c in evaluation.checks if c.check_id == "candidate_has_sources"]
+    assert len(sources_check) == 1
+    assert sources_check[0].status == "pass"
+
+
+# --- Memory variant comparison tests ---
+
+
+def test_compare_memory_variants_generates_files(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _full_pipeline_ch1_to_ch2(root, tmp_path)
+
+    result = compare_memory_variants(root, chapter_number=1)
+
+    assert Path(result["json_path"]).exists()
+    assert Path(result["md_path"]).exists()
+
+    variants = result["variants"]
+    assert len(variants) == 4
+    assert variants[0]["variant"] == "A"
+    assert variants[3]["variant"] == "D"
+
+
+def test_compare_memory_variants_d_has_more_than_a(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _full_pipeline_ch1_to_ch2(root, tmp_path)
+
+    result = compare_memory_variants(root, chapter_number=1)
+
+    a = result["variants"][0]
+    d = result["variants"][3]
+
+    # D should have at least as much as A, often more
+    assert len(d["constraints"]) >= len(a["constraints"])
+    assert len(d["forbidden"]) >= len(a["forbidden"])
+
+
+def test_compare_memory_variants_missing_files(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    result = compare_memory_variants(root, chapter_number=1)
+
+    assert len(result["missing_files"]) > 0
+    assert Path(result["json_path"]).exists()
+
+
+def test_compare_memory_variants_md_sections(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _full_pipeline_ch1_to_ch2(root, tmp_path)
+
+    result = compare_memory_variants(root, chapter_number=1)
+    md = Path(result["md_path"]).read_text(encoding="utf-8")
+
+    assert "记忆变体比较" in md
+    assert "变体 A" in md
+    assert "变体 D" in md
+    assert "增量分析" in md
