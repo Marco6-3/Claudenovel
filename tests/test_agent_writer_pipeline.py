@@ -1078,3 +1078,170 @@ def test_compare_memory_variants_md_sections(tmp_path: Path) -> None:
     assert "变体 A" in md
     assert "变体 D" in md
     assert "增量分析" in md
+
+
+# --- Evidence coverage gate tests ---
+
+
+def test_evidence_coverage_risk_when_analysis_derived_without_evidence(tmp_path: Path) -> None:
+    """Analysis-derived direction without evidence_refs should be flagged as risk."""
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record analysis-derived decision without evidence
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["延续尾钩冲突"],
+                "source": "analysis_derived",
+                "evidence_refs": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    coverage_check = [c for c in evaluation.checks if c.check_id == "evidence_direction_coverage"]
+    assert len(coverage_check) == 1
+    assert coverage_check[0].status == "risk"
+
+
+def test_evidence_coverage_pass_when_author_confirmed(tmp_path: Path) -> None:
+    """Author-confirmed (original) direction should pass without evidence."""
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record author-confirmed decision without evidence
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["作者原创的新方向"],
+                "source": "author_confirmed",
+                "evidence_refs": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    coverage_check = [c for c in evaluation.checks if c.check_id == "evidence_direction_coverage"]
+    assert len(coverage_check) == 1
+    assert coverage_check[0].status == "pass"
+
+
+def test_evidence_coverage_pass_when_analysis_derived_with_evidence(tmp_path: Path) -> None:
+    """Analysis-derived direction with evidence should pass."""
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["延续尾钩冲突"],
+                "source": "analysis_derived",
+                "evidence_refs": ["[CH001-P003]"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    coverage_check = [c for c in evaluation.checks if c.check_id == "evidence_direction_coverage"]
+    assert len(coverage_check) == 1
+    assert coverage_check[0].status == "pass"
+
+
+def test_evidence_contract_alignment_detects_unreferenced(tmp_path: Path) -> None:
+    """Evidence from handoff not referenced in contract/prompt should be flagged."""
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record decision with evidence
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["延续尾钩冲突"],
+                "evidence_refs": ["[CH001-P003]"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+
+    # Plan ch2 WITHOUT using plan_next_chapter (so evidence won't be enriched into contract)
+    plan_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+    )
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    alignment_check = [c for c in evaluation.checks if c.check_id == "evidence_contract_alignment"]
+    assert len(alignment_check) == 1
+    # Evidence is in handoff but contract was created via plan_chapter (not plan_next_chapter)
+    # so it won't have the evidence refs
+    assert alignment_check[0].status == "risk"
+
+
+def test_evidence_contract_alignment_pass_when_referenced(tmp_path: Path) -> None:
+    """Evidence from handoff referenced in contract should pass."""
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record decision with evidence
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["延续尾钩冲突"],
+                "evidence_refs": ["[CH001-P003]"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+
+    # Use plan_next_chapter which enriches evidence into contract
+    plan_next_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+    )
+
+    evaluation = evaluate_workflow(root, chapter_number=1)
+
+    alignment_check = [c for c in evaluation.checks if c.check_id == "evidence_contract_alignment"]
+    assert len(alignment_check) == 1
+    assert alignment_check[0].status == "pass"

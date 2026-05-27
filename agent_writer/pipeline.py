@@ -1690,6 +1690,103 @@ def evaluate_workflow(
             detail="未运行 draft-author-note",
         ))
 
+    # --- Check 9: Evidence coverage for author directions ---
+    if decisions_data:
+        decision_source = "analysis_derived"
+        has_prefs = False
+        has_evidence = False
+        for d in decisions_data.get("decisions", []):
+            if d.get("chapter_number") == chapter_number:
+                decision_source = d.get("source", "analysis_derived")
+                has_prefs = bool(d.get("next_chapter_preferences"))
+                has_evidence = bool(d.get("evidence_refs"))
+                break
+        if has_prefs:
+            if decision_source == "analysis_derived" and not has_evidence:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_direction_coverage",
+                    name="分析来源方向有证据支撑",
+                    status="risk",
+                    detail="来源为 analysis_derived 但 evidence_refs 为空",
+                ))
+            elif decision_source == "author_confirmed":
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_direction_coverage",
+                    name="分析来源方向有证据支撑",
+                    status="pass",
+                    detail="来源为 author_confirmed，不要求证据",
+                ))
+            elif has_evidence:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_direction_coverage",
+                    name="分析来源方向有证据支撑",
+                    status="pass",
+                    detail="方向有证据支撑",
+                ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_direction_coverage",
+                    name="分析来源方向有证据支撑",
+                    status="skip",
+                    detail="无下一章偏好",
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="evidence_direction_coverage",
+                name="分析来源方向有证据支撑",
+                status="skip",
+                detail="无下一章偏好",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="evidence_direction_coverage",
+            name="分析来源方向有证据支撑",
+            status="skip",
+            detail="缺少作者决策",
+        ))
+
+    # --- Check 10: Evidence contract alignment ---
+    if handoff_data and next_contract_data:
+        all_handoff_ev: set[str] = set()
+        for field_name in ("hard_constraint_evidence", "author_direction_evidence"):
+            for eid in handoff_data.get(field_name, []):
+                all_handoff_ev.add(eid)
+        if all_handoff_ev:
+            contract_dump = json.dumps(next_contract_data, ensure_ascii=False)
+            prompt_dump = next_prompt_text or ""
+            combined = contract_dump + prompt_dump
+            unreferenced = [eid for eid in all_handoff_ev if eid not in combined]
+            if not unreferenced:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_contract_alignment",
+                    name="交接包证据在合同或 prompt 中引用",
+                    status="pass",
+                    detail=f"全部 {len(all_handoff_ev)} 条证据已引用",
+                    evidence_refs=list(all_handoff_ev),
+                ))
+            else:
+                checks.append(WorkflowEvaluationItem(
+                    check_id="evidence_contract_alignment",
+                    name="交接包证据在合同或 prompt 中引用",
+                    status="risk",
+                    detail=f"{len(unreferenced)}/{len(all_handoff_ev)} 条证据未引用",
+                    evidence_refs=unreferenced,
+                ))
+        else:
+            checks.append(WorkflowEvaluationItem(
+                check_id="evidence_contract_alignment",
+                name="交接包证据在合同或 prompt 中引用",
+                status="skip",
+                detail="交接包无证据",
+            ))
+    else:
+        checks.append(WorkflowEvaluationItem(
+            check_id="evidence_contract_alignment",
+            name="交接包证据在合同或 prompt 中引用",
+            status="skip",
+            detail=f"缺少 {'交接包' if not handoff_data else '下一章合同'}",
+        ))
+
     # --- Tally ---
     pass_count = sum(1 for c in checks if c.status == "pass")
     risk_count = sum(1 for c in checks if c.status == "risk")

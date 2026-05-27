@@ -123,6 +123,7 @@ class AuthorDecision(StrictModel):
     forbidden_directions: list[str] = Field(default_factory=list)
     relationship_changes: list[str] = Field(default_factory=list)
     evidence_refs: list[str] = Field(default_factory=list)
+    source: Literal["analysis_derived", "author_confirmed"] = "analysis_derived"
     notes: str = ""
     confirmed_at: str = Field(default_factory=utc_now_iso)
 
