@@ -2,6 +2,7 @@
 
 from .pipeline import (
     commit_chapter,
+    draft_author_note,
     generate_discussion_packet,
     generate_draft,
     generate_handoff,
@@ -19,6 +20,7 @@ from .pipeline import (
 
 __all__ = [
     "commit_chapter",
+    "draft_author_note",
     "generate_discussion_packet",
     "generate_draft",
     "generate_handoff",

@@ -122,6 +122,7 @@ class AuthorDecision(StrictModel):
     next_chapter_preferences: list[str] = Field(default_factory=list)
     forbidden_directions: list[str] = Field(default_factory=list)
     relationship_changes: list[str] = Field(default_factory=list)
+    evidence_refs: list[str] = Field(default_factory=list)
     notes: str = ""
     confirmed_at: str = Field(default_factory=utc_now_iso)
 
@@ -160,5 +161,54 @@ class ChapterHandoff(StrictModel):
     active_foreshadowing: list[str] = Field(default_factory=list)
     required_payoffs_next: list[str] = Field(default_factory=list)
     hard_constraints: list[str] = Field(default_factory=list)
+    hard_constraint_evidence: list[str] = Field(default_factory=list)
     author_direction: str = ""
+    author_direction_evidence: list[str] = Field(default_factory=list)
     created_at: str = Field(default_factory=utc_now_iso)
+
+
+class ForeshadowingCandidate(StrictModel):
+    """A foreshadowing item suggested by analysis, not yet confirmed."""
+    id: str
+    content: str
+    evidence_refs: list[str] = Field(default_factory=list)
+    layer: Literal["主线", "支线", "氛围"] = "支线"
+    suggested_action: Literal["continue", "resolve", "abandon"] = "continue"
+    reason: str = ""
+
+
+class DecisionCandidate(StrictModel):
+    """Analysis-derived candidate for author decisions. Not written to state until confirmed."""
+    chapter_number: int
+
+    # Retain / modify
+    keep_chapter: bool = True
+    keep_reason: str = ""
+    keep_evidence: list[str] = Field(default_factory=list)
+
+    modifications: list[str] = Field(default_factory=list)
+    modification_evidence: list[str] = Field(default_factory=list)
+
+    # Next chapter directions
+    next_chapter_preferences: list[str] = Field(default_factory=list)
+    preference_evidence: list[str] = Field(default_factory=list)
+
+    # Forbidden directions
+    forbidden_directions: list[str] = Field(default_factory=list)
+    forbidden_evidence: list[str] = Field(default_factory=list)
+
+    # Foreshadowing
+    foreshadowing_active: list[ForeshadowingCandidate] = Field(default_factory=list)
+    foreshadowing_recyclable: list[ForeshadowingCandidate] = Field(default_factory=list)
+
+    # Character / relationship
+    character_state_candidates: dict[str, str] = Field(default_factory=dict)
+    relationship_changes: list[str] = Field(default_factory=list)
+    relationship_evidence: list[str] = Field(default_factory=list)
+
+    # Payoffs for next chapter
+    required_payoffs_next: list[str] = Field(default_factory=list)
+
+    notes: str = ""
+    source_files: list[str] = Field(default_factory=list)
+    generated_at: str = Field(default_factory=utc_now_iso)

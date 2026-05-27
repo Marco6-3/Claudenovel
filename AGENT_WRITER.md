@@ -42,6 +42,66 @@ python -X utf8 agent_writer_cli.py --project-root <书项目目录> <command>
 - `status`：查看计数状态。
 - `index-report`：查看 SQLite 索引中的产物和 blocking issues。
 - `llm-smoke`：验证 LLM 配置可用。
+- `discuss`：生成作者协商包。
+- `draft-author-note`：从分析产物生成决策候选。
+- `record-author-note`：从 JSON 文件记录作者确认决策。
+- `handoff`：生成章节交接包。
+- `plan-next`：基于交接 + 作者决策规划下一章。
+- `experiment`：运行 A/B/C/D 记忆变体实验。
+
+## 作者记忆系统
+
+每章提交后，作者可以通过协商包确认决策，系统自动沉淀到长期状态：
+
+```powershell
+# 1. 生成作者协商包
+python -X utf8 agent_writer_cli.py discuss --chapter 1
+
+# 2.（可选）从分析产物生成决策候选
+python -X utf8 agent_writer_cli.py draft-author-note --chapter 1 --analysis-dir .\novel_analysis_enhanced\
+
+# 3. 作者确认决策（从 JSON 文件读取）
+python -X utf8 agent_writer_cli.py record-author-note --chapter 1 --decision-file decision.json
+
+# 4. 生成交接包
+python -X utf8 agent_writer_cli.py handoff --chapter 1
+
+# 5. 规划下一章（自动加载交接 + 作者决策）
+python -X utf8 agent_writer_cli.py plan-next --chapter 2 --title "档案室的空座" --goal "追查校牌" --payoff "发现空座名单" --ending-hook "名单被改写"
+```
+
+### 分析产物 → 作者决策候选 桥接
+
+`draft-author-note` 从分析系统输出目录读取以下文件（全部可选，缺失时降级）：
+
+| 文件 | 用途 |
+|---|---|
+| `evidence_pack.json` | 评分后的证据段落，带 `[CHxxx-Pxxx]` ID |
+| `editorial_revision_prompt.md` | 编辑诊断报告，含 P0 问题和续写路线 |
+| `evidence_matrix.json` | QA 证据矩阵（带立场标注） |
+| `review_evidence_pack.json` | 审稿专用证据包 |
+| `llm_source_pack_manifest.json` | 章节/段落索引清单 |
+
+生成的候选文件位于 `author_discussion/`：
+- `chapter_XXXX_decision_candidate.json`：结构化候选（DecisionCandidate 模型）
+- `chapter_XXXX_decision_candidate.md`：可读候选报告
+
+**重要**：候选文件不会直接写入 `state/`。只有通过 `record-author-note` 确认后，决策才会进入长期状态。
+
+候选内容包含：
+- 建议保留的内容（附证据 ID）
+- 建议修改的问题（P0 问题，附证据 ID）
+- 下一章发展方向候选（从续写路线提取）
+- 活跃伏笔 / 可回收伏笔候选
+- 角色 / 关系状态变化候选
+- 作者禁区候选
+
+### 证据溯源
+
+确认后的作者决策携带 `evidence_refs`（如 `[CH001-P003]`），这些证据 ID 会：
+- 进入交接包的 `hard_constraint_evidence` 和 `author_direction_evidence`
+- 写入下一章合同的 `allowed_sources` 或 `foreshadowing_ops`
+- 使作者和模型都能看到关键约束的证据来源
 
 ## 状态与索引
 
@@ -57,7 +117,19 @@ python -X utf8 agent_writer_cli.py --project-root <书项目目录> <command>
 - `reviews/chapter_XXXX_review.json`
 - `accepted/chapter_XXXX.md`
 - `commits/chapter_XXXX_commit.json`
+- `author_discussion/chapter_XXXX_packet.md`：作者协商包
+- `author_discussion/chapter_XXXX_decision_candidate.json`：分析生成的决策候选
+- `author_discussion/chapter_XXXX_decision_candidate.md`：决策候选可读版
+- `handoffs/chapter_XXXX_handoff.json`：章节交接包（JSON）
+- `handoffs/chapter_XXXX_handoff.md`：交接包可读版
 - `state/agent_writer.db`
+- `state/author_decisions.json`：已确认的作者决策
+- `state/future_direction_ledger.json`：未来方向账本
+- `state/foreshadowing_ledger.json`：伏笔账本（只增不删）
+- `state/relationship_state.json`：角色关系状态
+- `state/chapter_summaries.json`：章节摘要
+- `state/characters.json`：角色档案
+- `state/system_rule_ledger.json`：系统规则变更
 
 SQLite 表：
 

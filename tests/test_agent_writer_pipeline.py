@@ -7,6 +7,7 @@ import pytest
 
 from agent_writer.pipeline import (
     commit_chapter,
+    draft_author_note,
     generate_discussion_packet,
     generate_draft,
     generate_handoff,
@@ -581,3 +582,280 @@ def test_experiment_runs_variants_and_generates_report(tmp_path: Path, monkeypat
     assert "A/B 实验报告" in report_text
     assert "| A |" in report_text
     assert "| B |" in report_text
+
+
+# --- Analysis-to-memory bridge tests ---
+
+
+def _make_analysis_dir(tmp_path: Path) -> Path:
+    """Create a minimal analysis directory with fake analysis outputs."""
+    analysis_dir = tmp_path / "analysis_output"
+    analysis_dir.mkdir()
+
+    # Evidence pack
+    evidence_pack = {
+        "query": "评价并给出建议",
+        "focus_entities": ["陈默"],
+        "evidence_count": 2,
+        "evidence": [
+            {
+                "id": "CH001-P003",
+                "chapter_index": 1,
+                "chapter_title": "旧楼的第三声铃",
+                "paragraph_index": 3,
+                "chars": 85,
+                "score": 24,
+                "matched_terms": ["陈默", "旧楼"],
+                "excerpt": "陈默推开旧楼铁门，空气中弥漫着霉味。",
+            },
+            {
+                "id": "CH001-P007",
+                "chapter_index": 1,
+                "chapter_title": "旧楼的第三声铃",
+                "paragraph_index": 7,
+                "chars": 92,
+                "score": 18,
+                "matched_terms": ["校牌", "血"],
+                "excerpt": "平台上躺着一张校牌，照片被深褐色的血迹浸透。",
+            },
+        ],
+    }
+    (analysis_dir / "evidence_pack.json").write_text(
+        json.dumps(evidence_pack, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+    # Editorial report with P0 issues and continuation routes
+    report = (
+        "# 编辑诊断报告\n\n"
+        "## P0 问题\n\n"
+        "P0：第三段节奏过慢，信息密度不足 [CH001-P003]\n\n"
+        "## 后续剧情路线\n\n"
+        "### 方向 A\n"
+        "延续旧楼调查，深入挖掘校牌背后的秘密 [CH001-P007]\n\n"
+        "### 方向 B\n"
+        "切换到秦思妍视角，展示她对事件的观察\n\n"
+    )
+    (analysis_dir / "editorial_revision_prompt.md").write_text(report, encoding="utf-8")
+
+    return analysis_dir
+
+
+def test_draft_author_note_generates_json_and_md(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+    analysis_dir = _make_analysis_dir(tmp_path)
+
+    result = draft_author_note(root, chapter_number=1, analysis_dir=analysis_dir)
+
+    assert Path(result["candidate_json"]).exists()
+    assert Path(result["candidate_md"]).exists()
+    assert "evidence_pack.json" in result["source_files"]
+    assert "editorial_revision_prompt.md" in result["source_files"]
+
+    # Verify JSON content
+    from agent_writer.models import DecisionCandidate
+    candidate = DecisionCandidate.model_validate_json(
+        Path(result["candidate_json"]).read_text(encoding="utf-8")
+    )
+    assert candidate.chapter_number == 1
+    assert candidate.keep_chapter is True
+    assert len(candidate.keep_evidence) > 0
+    assert "[CH001-P003]" in candidate.keep_evidence or "[CH001-P007]" in candidate.keep_evidence
+    assert len(candidate.modifications) > 0
+    assert len(candidate.next_chapter_preferences) > 0
+
+    # Verify MD content
+    md = Path(result["candidate_md"]).read_text(encoding="utf-8")
+    assert "决策候选" in md
+    assert "不会直接写入长期状态" in md
+    assert "record-author-note" in md
+
+
+def test_draft_author_note_candidates_do_not_enter_state(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+    analysis_dir = _make_analysis_dir(tmp_path)
+
+    # Record state before
+    decisions_before = json.loads((root / "state" / "author_decisions.json").read_text(encoding="utf-8"))
+    directions_before = json.loads((root / "state" / "future_direction_ledger.json").read_text(encoding="utf-8"))
+
+    # Generate candidate
+    draft_author_note(root, chapter_number=1, analysis_dir=analysis_dir)
+
+    # Verify state unchanged
+    decisions_after = json.loads((root / "state" / "author_decisions.json").read_text(encoding="utf-8"))
+    directions_after = json.loads((root / "state" / "future_direction_ledger.json").read_text(encoding="utf-8"))
+    assert decisions_after == decisions_before
+    assert directions_after == directions_before
+
+
+def test_draft_author_note_missing_files_degrade_gracefully(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Empty analysis dir
+    empty_dir = tmp_path / "empty_analysis"
+    empty_dir.mkdir()
+
+    result = draft_author_note(root, chapter_number=1, analysis_dir=empty_dir)
+
+    assert Path(result["candidate_json"]).exists()
+    assert result["source_files"] == []
+
+    from agent_writer.models import DecisionCandidate
+    candidate = DecisionCandidate.model_validate_json(
+        Path(result["candidate_json"]).read_text(encoding="utf-8")
+    )
+    assert candidate.keep_reason == "证据不足：未找到分析证据文件"
+    assert candidate.modifications == []
+    assert candidate.next_chapter_preferences == []
+
+
+def test_evidence_backed_decision_flows_into_handoff(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+    analysis_dir = _make_analysis_dir(tmp_path)
+
+    # Generate candidate
+    result = draft_author_note(root, chapter_number=1, analysis_dir=analysis_dir)
+    candidate_json = Path(result["candidate_json"]).read_text(encoding="utf-8")
+    candidate = json.loads(candidate_json)
+
+    # Author confirms with evidence refs
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "keep_chapter": True,
+                "next_chapter_preferences": ["延续旧楼调查"],
+                "forbidden_directions": ["不能让女主突然表白"],
+                "evidence_refs": ["[CH001-P003]", "[CH001-P007]"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+    # Generate handoff
+    handoff_result = generate_handoff(root, chapter_number=1)
+    handoff_json = json.loads(Path(handoff_result["handoff_json"]).read_text(encoding="utf-8"))
+
+    # Verify evidence carried into handoff
+    assert "[CH001-P003]" in handoff_json.get("hard_constraint_evidence", [])
+    assert "[CH001-P007]" in handoff_json.get("author_direction_evidence", [])
+
+
+def test_plan_next_writes_evidence_into_contract(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record author decision with evidence
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["延续尾钩冲突"],
+                "evidence_refs": ["[CH001-P003]"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+
+    plan_next_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+    )
+
+    from agent_writer.models import ChapterContract
+    contract = ChapterContract.model_validate_json(
+        (root / "chapter_contracts" / "chapter_0002_contract.json").read_text(encoding="utf-8")
+    )
+
+    # Evidence should be in allowed_sources or foreshadowing_ops
+    all_text = json.dumps(contract.model_dump(mode="json"), ensure_ascii=False)
+    assert "[CH001-P003]" in all_text
+
+
+def test_discuss_references_decision_candidate(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+    analysis_dir = _make_analysis_dir(tmp_path)
+
+    # Generate candidate first
+    draft_author_note(root, chapter_number=1, analysis_dir=analysis_dir)
+
+    # Now generate discussion packet
+    packet_path = generate_discussion_packet(root, chapter_number=1)
+    content = packet_path.read_text(encoding="utf-8")
+
+    assert "决策候选" in content
+    assert "建议修改" in content or "建议下一章方向" in content
+    assert "CH001" in content
+
+
+def test_draft_author_note_full_pipeline_smoke(tmp_path: Path) -> None:
+    """Smoke test: draft-author-note -> record-author-note -> handoff -> plan-next."""
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+    analysis_dir = _make_analysis_dir(tmp_path)
+
+    # Step 1: Generate candidate
+    result = draft_author_note(root, chapter_number=1, analysis_dir=analysis_dir)
+    assert Path(result["candidate_json"]).exists()
+
+    # Step 2: Author confirms (with modifications based on candidate)
+    candidate = json.loads(Path(result["candidate_json"]).read_text(encoding="utf-8"))
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "keep_chapter": True,
+                "keep_reason": candidate["keep_reason"],
+                "modifications": candidate["modifications"][:1],
+                "next_chapter_preferences": ["延续旧楼调查"],
+                "forbidden_directions": ["不能突然表白"],
+                "evidence_refs": candidate["keep_evidence"][:2],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+    # Step 3: Generate handoff
+    handoff_result = generate_handoff(root, chapter_number=1)
+    assert Path(handoff_result["handoff_json"]).exists()
+    handoff = json.loads(Path(handoff_result["handoff_json"]).read_text(encoding="utf-8"))
+    assert handoff["from_chapter"] == 1
+    assert len(handoff.get("hard_constraint_evidence", [])) > 0
+
+    # Step 4: Plan next chapter
+    plan_result = plan_next_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+    )
+    assert plan_result["handoff_loaded"] != "none"
+
+    # Verify contract has evidence
+    from agent_writer.models import ChapterContract
+    contract = ChapterContract.model_validate_json(
+        (root / "chapter_contracts" / "chapter_0002_contract.json").read_text(encoding="utf-8")
+    )
+    all_text = json.dumps(contract.model_dump(mode="json"), ensure_ascii=False)
+    assert "CH001" in all_text

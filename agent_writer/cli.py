@@ -7,6 +7,7 @@ from pathlib import Path
 from .experiment import run_experiment
 from .pipeline import (
     commit_chapter,
+    draft_author_note,
     generate_discussion_packet,
     generate_draft,
     generate_handoff,
@@ -85,6 +86,10 @@ def build_parser() -> argparse.ArgumentParser:
     # Author memory commands
     discuss = sub.add_parser("discuss", help="generate author discussion packet")
     discuss.add_argument("--chapter", type=int, required=True)
+
+    draft_note = sub.add_parser("draft-author-note", help="generate decision candidate from analysis outputs")
+    draft_note.add_argument("--chapter", type=int, required=True)
+    draft_note.add_argument("--analysis-dir", required=True)
 
     record = sub.add_parser("record-author-note", help="record author decisions from file")
     record.add_argument("--chapter", type=int, required=True)
@@ -187,6 +192,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "discuss":
         path = generate_discussion_packet(root, chapter_number=args.chapter)
         _print_json({"discussion_packet": str(path)})
+        return 0
+    if args.command == "draft-author-note":
+        _print_json(
+            draft_author_note(
+                root,
+                chapter_number=args.chapter,
+                analysis_dir=Path(args.analysis_dir),
+            )
+        )
         return 0
     if args.command == "record-author-note":
         _print_json(

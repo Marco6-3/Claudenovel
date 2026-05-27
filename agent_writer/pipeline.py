@@ -10,6 +10,8 @@ from .models import (
     ChapterHandoff,
     CharacterConstraint,
     CharacterConstraints,
+    DecisionCandidate,
+    ForeshadowingCandidate,
     ForeshadowingItem,
     FutureDirection,
     PrewritePlan,
@@ -69,6 +71,14 @@ def _handoff_path(root: Path, chapter_number: int) -> Path:
 
 def _handoff_md_path(root: Path, chapter_number: int) -> Path:
     return root / "handoffs" / f"{chapter_id(chapter_number)}_handoff.md"
+
+
+def _candidate_json_path(root: Path, chapter_number: int) -> Path:
+    return root / "author_discussion" / f"{chapter_id(chapter_number)}_decision_candidate.json"
+
+
+def _candidate_md_path(root: Path, chapter_number: int) -> Path:
+    return root / "author_discussion" / f"{chapter_id(chapter_number)}_decision_candidate.md"
 
 
 def init_project(
@@ -529,6 +539,15 @@ def generate_discussion_packet(
             if item.get("status", "active") == "active"
         ]
 
+    # Check for decision candidate
+    candidate_path = _candidate_json_path(root, chapter_number)
+    candidate = None
+    if candidate_path.exists():
+        try:
+            candidate = read_model(candidate_path, DecisionCandidate)
+        except (ValueError, KeyError):
+            candidate = None
+
     lines = [
         f"# 第{chapter_number}章 作者协商包",
         "",
@@ -539,6 +558,41 @@ def generate_discussion_packet(
         f"- 必须兑现：{', '.join(contract.required_payoffs)}",
         f"- 尾钩：{contract.ending_hook}",
         "",
+    ]
+
+    # Show decision candidate summary if available
+    if candidate:
+        lines.extend([
+            "## 分析系统生成的决策候选",
+            "",
+            f"> 来源文件：{', '.join(candidate.source_files) if candidate.source_files else '无'}",
+            f"> 保留理由：{candidate.keep_reason}",
+            "",
+            "以下为分析系统自动生成的候选内容，请勾选、修改或删除后确认。",
+            "",
+        ])
+        if candidate.modifications:
+            lines.append("### 建议修改")
+            lines.append("")
+            for i, mod in enumerate(candidate.modifications):
+                ev = candidate.modification_evidence[i] if i < len(candidate.modification_evidence) else "证据不足"
+                lines.append(f"- [ ] {mod}（证据：{ev}）")
+            lines.append("")
+        if candidate.next_chapter_preferences:
+            lines.append("### 建议下一章方向")
+            lines.append("")
+            for i, pref in enumerate(candidate.next_chapter_preferences):
+                ev = candidate.preference_evidence[i] if i < len(candidate.preference_evidence) else "证据不足"
+                lines.append(f"- [ ] {pref}（证据：{ev}）")
+            lines.append("")
+        if candidate.forbidden_directions:
+            lines.append("### 建议禁区")
+            lines.append("")
+            for fd in candidate.forbidden_directions:
+                lines.append(f"- [ ] {fd}")
+            lines.append("")
+
+    lines.extend([
         "## 本章可保留部分",
         "",
         "（请作者确认哪些部分值得保留）",
@@ -549,7 +603,7 @@ def generate_discussion_packet(
         "",
         "## 必须改掉的问题",
         "",
-    ]
+    ])
     if review and review.issues:
         for issue in review.issues:
             lines.append(f"- [{issue.severity}] {issue.code}: {issue.message}")
@@ -759,13 +813,17 @@ def generate_handoff(
 
     # Build hard constraints from forbidden beats + author forbidden directions
     hard_constraints = list(contract.forbidden_beats)
+    hard_constraint_evidence: list[str] = []
     if author_decision and author_decision.forbidden_directions:
         hard_constraints.extend(author_decision.forbidden_directions)
+        hard_constraint_evidence.extend(author_decision.evidence_refs)
 
     # Author direction
     author_direction = ""
+    author_direction_evidence: list[str] = []
     if author_decision and author_decision.next_chapter_preferences:
         author_direction = "；".join(author_decision.next_chapter_preferences)
+        author_direction_evidence.extend(author_decision.evidence_refs)
 
     # Required payoffs for next chapter (from author or auto-carry forward)
     required_next: list[str] = []
@@ -782,7 +840,9 @@ def generate_handoff(
         active_foreshadowing=active_foreshadowing_ids,
         required_payoffs_next=required_next,
         hard_constraints=hard_constraints,
+        hard_constraint_evidence=hard_constraint_evidence,
         author_direction=author_direction,
+        author_direction_evidence=author_direction_evidence,
     )
 
     # Write JSON
@@ -878,12 +938,378 @@ def plan_next_chapter(
     contract = read_model(_contract_path(root, chapter_number), ChapterContract)
     if handoff:
         contract.previous_handoff = handoff.summary
+        # Write evidence-backed constraints into allowed_sources
+        if handoff.hard_constraint_evidence:
+            contract.allowed_sources.extend(handoff.hard_constraint_evidence)
+        if handoff.author_direction_evidence:
+            contract.allowed_sources.extend(handoff.author_direction_evidence)
     if author_decision and author_decision.next_chapter_preferences:
-        # Add author preferences to foreshadowing_ops
+        # Add author preferences to foreshadowing_ops with evidence refs
+        pref_line = f"作者偏好：{'；'.join(author_decision.next_chapter_preferences)}"
+        if author_decision.evidence_refs:
+            pref_line += f"（证据：{', '.join(author_decision.evidence_refs)}）"
         contract.foreshadowing_ops = [
-            f"作者偏好：{'；'.join(author_decision.next_chapter_preferences)}",
+            pref_line,
             *contract.foreshadowing_ops,
         ]
     write_json(_contract_path(root, chapter_number), contract)
     result["handoff_loaded"] = str(handoff_path) if handoff else "none"
     return result
+
+
+# --- Analysis-to-memory bridge ---
+
+
+def _read_json_safe(path: Path) -> dict[str, object] | None:
+    """Read a JSON file, returning None if it doesn't exist or is invalid."""
+    if not path.exists():
+        return None
+    try:
+        return read_json(path)
+    except (ValueError, KeyError):
+        return None
+
+
+def _read_text_safe(path: Path) -> str | None:
+    """Read a text file, returning None if it doesn't exist."""
+    if not path.exists():
+        return None
+    return read_text(path)
+
+
+def _extract_evidence_ids(text: str) -> list[str]:
+    """Extract evidence IDs like [CH035-P001] from text."""
+    import re
+    return list(dict.fromkeys(re.findall(r"\[CH\d+-P\d+\]", text)))
+
+
+def _extract_p0_issues_from_report(report_text: str) -> list[dict[str, str]]:
+    """Extract P0 issues from an editorial report markdown."""
+    import re
+    issues: list[dict[str, str]] = []
+    # Look for P0 markers in various formats
+    for match in re.finditer(
+        r"(?:P0|优先级.*?P0|最高优先级)[：:]\s*(.+?)(?:\n\n|\n(?=##)|\n(?=###)|\Z)",
+        report_text,
+        re.DOTALL,
+    ):
+        block = match.group(1).strip()
+        evidence = _extract_evidence_ids(block)
+        issues.append({"description": block[:500], "evidence": evidence})
+    return issues
+
+
+def _extract_continuation_routes_from_report(report_text: str) -> list[dict[str, str]]:
+    """Extract continuation routes from an editorial report markdown."""
+    import re
+    routes: list[dict[str, str]] = []
+    # Try to find routes section
+    route_section = ""
+    route_match = re.search(
+        r"##\s*(?:后续剧情路线|续写路线|continuation routes)(.*?)(?=\n##\s|\Z)",
+        report_text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if route_match:
+        route_section = route_match.group(1)
+
+    # Extract individual routes (### 方向 A / Route A / 路线A etc.)
+    for match in re.finditer(
+        r"###?\s*(?:方向|路线|Route)\s*([A-Z\d])[：:]*\s*(.+?)(?=\n###?\s*(?:方向|路线|Route)|\Z)",
+        route_section,
+        re.DOTALL,
+    ):
+        label = match.group(1)
+        body = match.group(2).strip()
+        evidence = _extract_evidence_ids(body)
+        routes.append({
+            "label": label,
+            "description": body[:800],
+            "evidence": evidence,
+        })
+    return routes
+
+
+def _extract_foreshadowing_from_evidence(
+    evidence_items: list[dict[str, object]],
+    active_foreshadowing: list[dict[str, object]],
+) -> tuple[list[ForeshadowingCandidate], list[ForeshadowingCandidate]]:
+    """Build foreshadowing candidates from evidence and existing ledger."""
+    active: list[ForeshadowingCandidate] = []
+    recyclable: list[ForeshadowingCandidate] = []
+
+    for item in active_foreshadowing:
+        eid = item.get("id", f"FS-{item.get('planted_chapter', '?')}")
+        content = item.get("content", "")
+        refs = [eid]
+        # See if any evidence mentions this foreshadowing content
+        for ev in evidence_items:
+            excerpt = ev.get("excerpt", "")
+            if content and any(token in excerpt for token in content.split()[:3]):
+                refs.append(ev.get("id", ""))
+
+        candidate = ForeshadowingCandidate(
+            id=eid,
+            content=content,
+            evidence_refs=[r for r in refs if r],
+            layer=item.get("layer", "支线"),
+            suggested_action="continue",
+            reason=f"活跃伏笔，埋设于第{item.get('planted_chapter', '?')}章",
+        )
+        active.append(candidate)
+
+    return active, recyclable
+
+
+def draft_author_note(
+    project_root: Path,
+    *,
+    chapter_number: int,
+    analysis_dir: Path,
+) -> dict[str, str]:
+    """Generate a decision candidate from analysis outputs.
+
+    Reads available analysis files and produces a DecisionCandidate JSON + MD
+    in author_discussion/. The candidate must be confirmed via record-author-note
+    before any state is modified.
+
+    Supported analysis files (all optional, graceful degradation on missing):
+    - evidence_pack.json: scored evidence items with [CHxxx-Pxxx] IDs
+    - editorial_revision_prompt.md or any *_report.md: editorial diagnosis
+    - evidence_matrix.json: QA evidence with stances
+    - review_evidence_pack.json: review-specific evidence
+    - llm_source_pack_manifest.json: chapter/paragraph index
+    """
+    root = ensure_project(project_root)
+    analysis_dir = Path(analysis_dir)
+    source_files: list[str] = []
+
+    # --- Read analysis outputs ---
+    evidence_pack = _read_json_safe(analysis_dir / "evidence_pack.json")
+    if evidence_pack:
+        source_files.append("evidence_pack.json")
+
+    # Try multiple report file names
+    report_text = ""
+    for report_name in (
+        "editorial_revision_prompt.md",
+        "review_improve_continue_prompt.md",
+    ):
+        text = _read_text_safe(analysis_dir / report_name)
+        if text:
+            report_text = text
+            source_files.append(report_name)
+            break
+
+    # Also scan for any *_report.md files
+    if not report_text:
+        for md_file in sorted(analysis_dir.glob("*report*.md")):
+            text = _read_text_safe(md_file)
+            if text and len(text) > 200:
+                report_text = text
+                source_files.append(md_file.name)
+                break
+
+    evidence_matrix = _read_json_safe(analysis_dir / "evidence_matrix.json")
+    if evidence_matrix is not None:
+        source_files.append("evidence_matrix.json")
+
+    review_evidence = _read_json_safe(analysis_dir / "review_evidence_pack.json")
+    if review_evidence is not None:
+        source_files.append("review_evidence_pack.json")
+
+    manifest = _read_json_safe(analysis_dir / "llm_source_pack_manifest.json")
+    if manifest is not None:
+        source_files.append("llm_source_pack_manifest.json")
+
+    # --- Extract evidence items ---
+    evidence_items: list[dict[str, object]] = []
+    if evidence_pack and "evidence" in evidence_pack:
+        evidence_items = evidence_pack["evidence"]  # type: ignore[assignment]
+
+    # --- Build candidates from evidence ---
+    all_evidence_ids: list[str] = []
+    for item in evidence_items:
+        eid = item.get("id", "")
+        if eid:
+            all_evidence_ids.append(f"[{eid}]")
+
+    # --- Extract P0 issues as modification candidates ---
+    p0_issues = _extract_p0_issues_from_report(report_text) if report_text else []
+    modifications: list[str] = []
+    modification_evidence: list[str] = []
+    for issue in p0_issues:
+        desc = issue["description"]
+        modifications.append(desc[:200])
+        modification_evidence.extend(issue.get("evidence", []))
+
+    # --- Extract continuation routes as preference candidates ---
+    routes = _extract_continuation_routes_from_report(report_text) if report_text else []
+    preferences: list[str] = []
+    preference_evidence: list[str] = []
+    for route in routes:
+        label = route["label"]
+        desc = route["description"][:200]
+        preferences.append(f"方向{label}：{desc}")
+        preference_evidence.extend(route.get("evidence", []))
+
+    # --- Load existing foreshadowing ledger ---
+    foreshadowing_path = root / "state" / "foreshadowing_ledger.json"
+    active_foreshadowing: list[dict[str, object]] = []
+    if foreshadowing_path.exists():
+        fs_data = read_json(foreshadowing_path)
+        active_foreshadowing = [
+            item for item in fs_data.get("items", [])
+            if item.get("status", "active") == "active"
+        ]
+
+    fs_active, fs_recyclable = _extract_foreshadowing_from_evidence(
+        evidence_items, active_foreshadowing
+    )
+
+    # --- Build keep reason from evidence quality ---
+    keep_reason = ""
+    keep_evidence: list[str] = []
+    if evidence_items:
+        top_items = sorted(evidence_items, key=lambda x: x.get("score", 0), reverse=True)[:3]
+        keep_reason = f"分析产出 {len(evidence_items)} 条证据"
+        keep_evidence = [f"[{item.get('id', '')}]" for item in top_items if item.get("id")]
+    else:
+        keep_reason = "证据不足：未找到分析证据文件"
+
+    # --- Build candidate ---
+    candidate = DecisionCandidate(
+        chapter_number=chapter_number,
+        keep_chapter=True,
+        keep_reason=keep_reason,
+        keep_evidence=keep_evidence,
+        modifications=modifications,
+        modification_evidence=modification_evidence,
+        next_chapter_preferences=preferences,
+        preference_evidence=preference_evidence,
+        forbidden_directions=[],
+        forbidden_evidence=[],
+        foreshadowing_active=fs_active,
+        foreshadowing_recyclable=fs_recyclable,
+        character_state_candidates={},
+        relationship_changes=[],
+        relationship_evidence=[],
+        required_payoffs_next=[],
+        notes="从分析产物自动生成的候选，请作者确认后通过 record-author-note 写入状态。",
+        source_files=source_files,
+    )
+
+    # --- Write JSON ---
+    json_path = write_json(_candidate_json_path(root, chapter_number), candidate)
+
+    # --- Write human-readable MD ---
+    md_lines = [
+        f"# 第{chapter_number}章 决策候选（从分析产物生成）",
+        "",
+        "> 此文件为分析系统自动生成的候选，**不会直接写入长期状态**。",
+        "> 请作者审阅、修改后，通过 `record-author-note` 确认。",
+        "",
+        "## 数据来源",
+        "",
+    ]
+    if source_files:
+        for sf in source_files:
+            md_lines.append(f"- {sf}")
+    else:
+        md_lines.append("- 未找到分析文件，候选内容为空")
+
+    md_lines.extend([
+        "",
+        "## 建议保留",
+        "",
+        f"- 保留本章：{'是' if candidate.keep_chapter else '否'}",
+        f"- 理由：{candidate.keep_reason}",
+    ])
+    if keep_evidence:
+        md_lines.append(f"- 证据：{', '.join(keep_evidence)}")
+
+    md_lines.extend(["", "## 建议修改的问题", ""])
+    if modifications:
+        for i, mod in enumerate(modifications):
+            ev = modification_evidence[i] if i < len(modification_evidence) else "证据不足"
+            md_lines.append(f"{i + 1}. {mod}")
+            md_lines.append(f"   - 证据：{ev}")
+    else:
+        md_lines.append("- 无 P0 问题（或未找到编辑报告）")
+
+    md_lines.extend(["", "## 下一章发展方向候选", ""])
+    if preferences:
+        for i, pref in enumerate(preferences):
+            ev = preference_evidence[i] if i < len(preference_evidence) else "证据不足"
+            md_lines.append(f"{i + 1}. {pref}")
+            md_lines.append(f"   - 证据：{ev}")
+    else:
+        md_lines.append("- 无续写路线候选（或未找到编辑报告）")
+
+    md_lines.extend(["", "## 活跃伏笔候选", ""])
+    if fs_active:
+        for item in fs_active:
+            md_lines.append(f"- [{item.id}] {item.content}（建议：{item.suggested_action}）")
+            if item.evidence_refs:
+                md_lines.append(f"  - 证据：{', '.join(item.evidence_refs)}")
+    else:
+        md_lines.append("- 无活跃伏笔")
+
+    md_lines.extend(["", "## 可回收伏笔候选", ""])
+    if fs_recyclable:
+        for item in fs_recyclable:
+            md_lines.append(f"- [{item.id}] {item.content}（建议：{item.suggested_action}）")
+    else:
+        md_lines.append("- 无可回收伏笔")
+
+    md_lines.extend([
+        "",
+        "## 角色/关系状态变化候选",
+        "",
+    ])
+    if candidate.character_state_candidates:
+        for name, state in candidate.character_state_candidates.items():
+            md_lines.append(f"- {name}：{state}")
+    else:
+        md_lines.append("- 无角色状态候选")
+
+    if candidate.relationship_changes:
+        for change in candidate.relationship_changes:
+            md_lines.append(f"- {change}")
+    else:
+        md_lines.append("- 无关系变化候选")
+
+    md_lines.extend([
+        "",
+        "## 作者禁区候选",
+        "",
+    ])
+    if candidate.forbidden_directions:
+        for fd in candidate.forbidden_directions:
+            md_lines.append(f"- {fd}")
+    else:
+        md_lines.append("- 无禁区候选（请作者手动添加）")
+
+    md_lines.extend([
+        "",
+        "---",
+        "",
+        "## 确认方式",
+        "",
+        "将以上内容编辑为 JSON 文件后运行：",
+        "",
+        "```powershell",
+        f"python agent_writer_cli.py record-author-note --chapter {chapter_number} --decision-file <your-file.json>",
+        "```",
+        "",
+        "或直接编辑此候选后运行 discuss 生成完整协商包。",
+    ])
+
+    md_path = write_text(_candidate_md_path(root, chapter_number), "\n".join(md_lines))
+
+    index_store.upsert_artifact(root, chapter_number, "decision_candidate", json_path)
+    return {
+        "candidate_json": str(json_path),
+        "candidate_md": str(md_path),
+        "source_files": source_files,
+    }
