@@ -48,6 +48,8 @@ python -X utf8 agent_writer_cli.py --project-root <书项目目录> <command>
 - `handoff`：生成章节交接包。
 - `plan-next`：基于交接 + 作者决策规划下一章。
 - `experiment`：运行 A/B/C/D 记忆变体实验。
+- `evaluate-workflow`：评估作者记忆工作流完整性（证据传播、禁区检查等）。
+- `compare-memory-variants`：比较不同记忆变体（baseline/handoff/author_memory/full）的约束、证据、伏笔差异。
 
 ## 作者记忆系统
 
@@ -103,6 +105,62 @@ python -X utf8 agent_writer_cli.py plan-next --chapter 2 --title "档案室的�
 - 写入下一章合同的 `allowed_sources` 或 `foreshadowing_ops`
 - 使作者和模型都能看到关键约束的证据来源
 
+### 证据覆盖门禁
+
+评估工作流包含证据覆盖检查：
+- 分析来源（`source=analysis_derived`）的方向无 `evidence_refs` → risk
+- 作者原创（`source=author_confirmed`）的方向不要求证据
+- 交接包中的证据未在合同/prompt 中引用 → risk
+
+## 可复现 Smoke 工作流
+
+以下命令序列可验证完整作者记忆工作流，不调用真实 LLM：
+
+```powershell
+# 1. 初始化项目
+python -X utf8 agent_writer_cli.py init --name "测试书" --genre "都市异能" --premise "校园灵异" --target-reader "悬疑读者"
+
+# 2. 规划第1章
+python -X utf8 agent_writer_cli.py plan --chapter 1 --title "旧楼的第三声铃" --goal "确认铃声来源" --payoff "找到染血校牌" --ending-hook "校牌背面出现主角的名字"
+
+# 3. 导入草稿（或用 generate 调 LLM）
+# 手动写一个 draft.md，然后:
+python -X utf8 agent_writer_cli.py write --chapter 1 --draft-file draft.md
+
+# 4. 审稿
+python -X utf8 agent_writer_cli.py review --chapter 1
+
+# 5. 提交
+python -X utf8 agent_writer_cli.py commit --chapter 1 --approve
+
+# 6. 从分析产物生成决策候选
+python -X utf8 agent_writer_cli.py draft-author-note --chapter 1 --analysis-dir .\novel_analysis_enhanced\
+
+# 7. 生成作者协商包
+python -X utf8 agent_writer_cli.py discuss --chapter 1
+
+# 8. 作者确认决策
+python -X utf8 agent_writer_cli.py record-author-note --chapter 1 --decision-file decision.json
+
+# 9. 生成交接包
+python -X utf8 agent_writer_cli.py handoff --chapter 1
+
+# 10. 规划下一章
+python -X utf8 agent_writer_cli.py plan-next --chapter 2 --title "档案室的空座" --goal "追查校牌" --payoff "发现空座名单" --ending-hook "名单被改写"
+
+# 11. 评估工作流
+python -X utf8 agent_writer_cli.py evaluate-workflow --chapter 1
+
+# 12. 比较记忆变体
+python -X utf8 agent_writer_cli.py compare-memory-variants --chapter 1
+```
+
+也可以通过 pytest 运行完整 smoke 测试：
+
+```powershell
+python -X utf8 -m pytest tests/test_agent_writer_pipeline.py::test_full_author_memory_smoke_no_llm -v
+```
+
 ## 状态与索引
 
 每个书项目会生成：
@@ -122,6 +180,10 @@ python -X utf8 agent_writer_cli.py plan-next --chapter 2 --title "档案室的�
 - `author_discussion/chapter_XXXX_decision_candidate.md`：决策候选可读版
 - `handoffs/chapter_XXXX_handoff.json`：章节交接包（JSON）
 - `handoffs/chapter_XXXX_handoff.md`：交接包可读版
+- `evaluations/workflow_evaluation_chapter_XXXX.json`：工作流评估结果
+- `evaluations/workflow_evaluation_chapter_XXXX.md`：工作流评估可读版
+- `experiments/memory_variant_comparison_chapter_XXXX.json`：记忆变体比较
+- `experiments/memory_variant_comparison_chapter_XXXX.md`：记忆变体比较可读版
 - `state/agent_writer.db`
 - `state/author_decisions.json`：已确认的作者决策
 - `state/future_direction_ledger.json`：未来方向账本

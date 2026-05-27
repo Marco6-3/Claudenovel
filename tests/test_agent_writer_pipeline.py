@@ -1302,3 +1302,109 @@ def test_evidence_contract_alignment_pass_when_referenced(tmp_path: Path) -> Non
     alignment_check = [c for c in evaluation.checks if c.check_id == "evidence_contract_alignment"]
     assert len(alignment_check) == 1
     assert alignment_check[0].status == "pass"
+
+
+# --- Full smoke test (no LLM) ---
+
+
+def test_full_author_memory_smoke_no_llm(tmp_path: Path) -> None:
+    """Smoke test: complete author-memory workflow without calling LLM.
+
+    Steps: init → plan → write → review → commit → draft-author-note →
+    discuss → record-author-note → handoff → plan-next → write ch2 →
+    review ch2 → evaluate-workflow → compare-memory-variants
+    """
+    root = _init(tmp_path)
+    analysis_dir = _make_analysis_dir(tmp_path)
+
+    # Step 1: Chapter 1 already planned by _init. Write and commit.
+    draft1 = root / "drafts" / "chapter_0001_draft.md"
+    draft1.write_text(
+        "陈默推开旧楼铁门，在第三声铃响后找到染血校牌。\n\n校牌背面出现主角的名字。",
+        encoding="utf-8",
+    )
+    review1 = review_chapter(root, chapter_number=1)
+    assert review1.blocking is False
+    commit_chapter(root, chapter_number=1, approve=True)
+
+    # Step 2: Generate decision candidate from analysis
+    candidate_result = draft_author_note(root, chapter_number=1, analysis_dir=analysis_dir)
+    assert Path(candidate_result["candidate_json"]).exists()
+
+    # Step 3: Generate discussion packet
+    packet_path = generate_discussion_packet(root, chapter_number=1)
+    assert packet_path.exists()
+    packet_content = packet_path.read_text(encoding="utf-8")
+    assert "快速提交" in packet_content
+
+    # Step 4: Author confirms with evidence
+    candidate = json.loads(
+        (root / "author_discussion" / "chapter_0001_decision_candidate.json").read_text(encoding="utf-8")
+    )
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "keep_chapter": True,
+                "keep_reason": "核心场景效果好",
+                "modifications": candidate.get("modifications", [])[:1],
+                "next_chapter_preferences": ["延续旧楼调查"],
+                "forbidden_directions": ["不能突然表白"],
+                "evidence_refs": candidate.get("keep_evidence", [])[:2],
+                "source": "analysis_derived",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_result = record_author_note(root, chapter_number=1, decision_file=decision_file)
+    assert Path(record_result["decision"]).exists()
+
+    # Step 5: Generate handoff
+    handoff_result = generate_handoff(root, chapter_number=1)
+    assert Path(handoff_result["handoff_json"]).exists()
+    handoff = json.loads(Path(handoff_result["handoff_json"]).read_text(encoding="utf-8"))
+    assert handoff["from_chapter"] == 1
+    assert handoff["to_chapter"] == 2
+
+    # Step 6: Plan next chapter with handoff context
+    plan_result = plan_next_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+        characters=["秦思妍"],
+    )
+    assert plan_result["handoff_loaded"] != "none"
+
+    # Step 7: Write and review ch2 draft
+    draft2 = root / "drafts" / "chapter_0002_draft.md"
+    draft2.write_text(
+        "陈默在档案室发现空座名单。\n\n名单最后一行被新墨水改写。",
+        encoding="utf-8",
+    )
+    review2 = review_chapter(root, chapter_number=2)
+    assert review2.blocking is False
+
+    # Step 8: Evaluate workflow
+    evaluation = evaluate_workflow(root, chapter_number=1)
+    assert evaluation.fail_count == 0
+    assert evaluation.pass_count > 0
+    assert (root / "evaluations" / "workflow_evaluation_chapter_0001.json").exists()
+
+    # Step 9: Compare memory variants
+    comparison = compare_memory_variants(root, chapter_number=1)
+    assert len(comparison["variants"]) == 4
+    assert Path(comparison["json_path"]).exists()
+
+    # Verify the full chain: evidence propagated
+    check_ids = {c.check_id for c in evaluation.checks}
+    assert "evidence_candidate_to_handoff" in check_ids
+    assert "evidence_to_next_contract" in check_ids
+    assert "draft_payoff_coverage" in check_ids
+
+    # Verify no blocking issues
+    assert index_report(root)["blocking_issues"] == []
