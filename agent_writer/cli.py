@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .experiment import run_experiment
 from .pipeline import (
     commit_chapter,
     generate_discussion_packet,
@@ -99,6 +100,12 @@ def build_parser() -> argparse.ArgumentParser:
     plan_next.add_argument("--payoff", action="append", required=True)
     plan_next.add_argument("--ending-hook", required=True)
     plan_next.add_argument("--character", action="append", default=[])
+
+    experiment = sub.add_parser("experiment", help="run A/B experiment across memory variants")
+    experiment.add_argument("--chapter", type=int, required=True)
+    experiment.add_argument("--variants", nargs="+", default=["A", "B", "C", "D"])
+    experiment.add_argument("--temperature", type=float, default=0.7)
+    experiment.add_argument("--max-tokens", type=int, default=2200)
 
     return parser
 
@@ -203,6 +210,17 @@ def main(argv: list[str] | None = None) -> int:
                 required_payoffs=args.payoff,
                 ending_hook=args.ending_hook,
                 characters=args.character,
+            )
+        )
+        return 0
+    if args.command == "experiment":
+        _print_json(
+            run_experiment(
+                root,
+                chapter_number=args.chapter,
+                variants=args.variants,
+                temperature=args.temperature,
+                max_tokens=args.max_tokens,
             )
         )
         return 0

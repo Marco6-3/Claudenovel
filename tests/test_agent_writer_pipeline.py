@@ -526,3 +526,58 @@ def test_record_author_note_chapter_mismatch(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="chapter_number"):
         record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+
+def test_experiment_runs_variants_and_generates_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_writer.experiment import run_experiment
+
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record author decision for memory variants
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["延续尾钩"],
+                "forbidden_directions": ["不能突然表白"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+
+    # Plan chapter 2
+    plan_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+        characters=["秦思妍"],
+    )
+
+    class FakeClient:
+        config = type("Config", (), {"model": "fake-exp"})()
+
+        def complete(self, prompt: str, *, temperature: float, max_tokens: int) -> str:
+            # Return a draft that passes quality gate
+            return "陈默在档案室发现空座名单。\n\n名单最后一行被新墨水改写。"
+
+    monkeypatch.setattr("agent_writer.experiment.build_client", lambda project_root: FakeClient())
+
+    result = run_experiment(root, chapter_number=2, variants=["A", "B"])
+
+    assert result["chapter_number"] == 2
+    assert result["variants"] == ["A", "B"]
+    assert len(result["scores"]) == 2
+    report_path = Path(result["report"])
+    assert report_path.exists()
+    report_text = report_path.read_text(encoding="utf-8")
+    assert "A/B 实验报告" in report_text
+    assert "| A |" in report_text
+    assert "| B |" in report_text
