@@ -6,10 +6,14 @@ from pathlib import Path
 
 from .pipeline import (
     commit_chapter,
+    generate_discussion_packet,
     generate_draft,
+    generate_handoff,
     init_project,
     index_report,
     plan_chapter,
+    plan_next_chapter,
+    record_author_note,
     review_chapter,
     rewrite_draft,
     status_report,
@@ -76,6 +80,26 @@ def build_parser() -> argparse.ArgumentParser:
     index.add_argument("--limit", type=int, default=20)
 
     sub.add_parser("status", help="show project status")
+
+    # Author memory commands
+    discuss = sub.add_parser("discuss", help="generate author discussion packet")
+    discuss.add_argument("--chapter", type=int, required=True)
+
+    record = sub.add_parser("record-author-note", help="record author decisions from file")
+    record.add_argument("--chapter", type=int, required=True)
+    record.add_argument("--decision-file", required=True)
+
+    handoff = sub.add_parser("handoff", help="generate chapter handoff package")
+    handoff.add_argument("--chapter", type=int, required=True)
+
+    plan_next = sub.add_parser("plan-next", help="plan next chapter using handoff + author decisions")
+    plan_next.add_argument("--chapter", type=int, required=True)
+    plan_next.add_argument("--title", required=True)
+    plan_next.add_argument("--goal", required=True)
+    plan_next.add_argument("--payoff", action="append", required=True)
+    plan_next.add_argument("--ending-hook", required=True)
+    plan_next.add_argument("--character", action="append", default=[])
+
     return parser
 
 
@@ -151,6 +175,36 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "status":
         _print_json(status_report(root))
+        return 0
+
+    if args.command == "discuss":
+        path = generate_discussion_packet(root, chapter_number=args.chapter)
+        _print_json({"discussion_packet": str(path)})
+        return 0
+    if args.command == "record-author-note":
+        _print_json(
+            record_author_note(
+                root,
+                chapter_number=args.chapter,
+                decision_file=Path(args.decision_file),
+            )
+        )
+        return 0
+    if args.command == "handoff":
+        _print_json(generate_handoff(root, chapter_number=args.chapter))
+        return 0
+    if args.command == "plan-next":
+        _print_json(
+            plan_next_chapter(
+                root,
+                chapter_number=args.chapter,
+                title=args.title,
+                goal=args.goal,
+                required_payoffs=args.payoff,
+                ending_hook=args.ending_hook,
+                characters=args.character,
+            )
+        )
         return 0
 
     parser.error(f"unknown command: {args.command}")

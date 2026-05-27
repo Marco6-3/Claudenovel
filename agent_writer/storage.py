@@ -20,6 +20,8 @@ DIRS = (
     "accepted",
     "commits",
     "state",
+    "author_discussion",
+    "handoffs",
 )
 
 

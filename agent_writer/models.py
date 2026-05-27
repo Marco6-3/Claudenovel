@@ -108,3 +108,57 @@ class ChapterCommit(StrictModel):
     review_file: str
     contract_file: str
     state_updates: dict[str, object] = Field(default_factory=dict)
+
+
+# --- Author memory models ---
+
+
+class AuthorDecision(StrictModel):
+    """Author's confirmed decisions about a committed chapter."""
+    chapter_number: int
+    keep_chapter: bool = True
+    keep_reason: str = ""
+    modifications: list[str] = Field(default_factory=list)
+    next_chapter_preferences: list[str] = Field(default_factory=list)
+    forbidden_directions: list[str] = Field(default_factory=list)
+    relationship_changes: list[str] = Field(default_factory=list)
+    notes: str = ""
+    confirmed_at: str = Field(default_factory=utc_now_iso)
+
+
+class FutureDirection(StrictModel):
+    """A potential future story direction, prioritized and tracked."""
+    id: str
+    description: str
+    priority: Literal["high", "medium", "low"] = "medium"
+    source_chapter: int
+    status: Literal["active", "adopted", "abandoned"] = "active"
+    reason: str = ""
+    created_at: str = Field(default_factory=utc_now_iso)
+
+
+class ForeshadowingItem(StrictModel):
+    """A foreshadowing element with lifecycle tracking. Append-only."""
+    id: str
+    content: str
+    planted_chapter: int
+    expected_resolution_chapter: int | None = None
+    layer: Literal["主线", "支线", "氛围"] = "支线"
+    status: Literal["active", "resolved", "abandoned"] = "active"
+    resolution_chapter: int | None = None
+    resolution_note: str = ""
+    created_at: str = Field(default_factory=utc_now_iso)
+
+
+class ChapterHandoff(StrictModel):
+    """Context package passed from one chapter to the next."""
+    from_chapter: int
+    to_chapter: int
+    summary: str
+    character_states: dict[str, str] = Field(default_factory=dict)
+    unresolved_questions: list[str] = Field(default_factory=list)
+    active_foreshadowing: list[str] = Field(default_factory=list)
+    required_payoffs_next: list[str] = Field(default_factory=list)
+    hard_constraints: list[str] = Field(default_factory=list)
+    author_direction: str = ""
+    created_at: str = Field(default_factory=utc_now_iso)

@@ -7,10 +7,14 @@ import pytest
 
 from agent_writer.pipeline import (
     commit_chapter,
+    generate_discussion_packet,
     generate_draft,
+    generate_handoff,
     init_project,
     index_report,
     plan_chapter,
+    plan_next_chapter,
+    record_author_note,
     review_chapter,
     rewrite_draft,
     status_report,
@@ -228,3 +232,297 @@ def test_llm_config_loads_project_env_without_exposing_secret(tmp_path: Path, mo
     assert config.chat_url == "https://api.example.test/v1/chat/completions"
     assert config.model == "test-model"
     assert config.api_key == "secret-value"
+
+
+# --- Author memory tests ---
+
+
+def _commit_chapter_1(root: Path) -> None:
+    """Helper: plan, write, review, commit chapter 1."""
+    plan_chapter(
+        root,
+        chapter_number=1,
+        title="旧楼的第三声铃",
+        goal="主角进入旧楼确认铃声来源",
+        required_payoffs=["找到染血校牌"],
+        ending_hook="校牌背面出现主角的名字",
+        characters=["秦思妍"],
+    )
+    draft = root / "drafts" / "chapter_0001_draft.md"
+    draft.write_text(
+        "陈默推开旧楼铁门，在第三声铃响后找到染血校牌。\n\n校牌背面出现主角的名字。",
+        encoding="utf-8",
+    )
+    review_chapter(root, chapter_number=1)
+    commit_chapter(root, chapter_number=1, approve=True)
+
+
+def test_discuss_generates_packet(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    path = generate_discussion_packet(root, chapter_number=1)
+
+    assert path.exists()
+    content = path.read_text(encoding="utf-8")
+    assert "第1章 作者协商包" in content
+    assert "旧楼的第三声铃" in content
+    assert "方向 A" in content
+    assert "方向 B" in content
+    assert "方向 C" in content
+    assert "伏笔管理" in content
+    assert "作者明确禁止的走向" in content
+    assert "record-author-note" in content
+
+
+def test_record_author_note_updates_state_files(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "keep_chapter": True,
+                "keep_reason": "核心场景效果好",
+                "modifications": ["第三段节奏太慢"],
+                "next_chapter_preferences": ["延续尾钩冲突", "增加女主戏份"],
+                "forbidden_directions": ["不能让女主突然表白"],
+                "relationship_changes": ["共同经历后信任度+1"],
+                "notes": "",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+    # Verify author decisions written
+    decisions = json.loads((root / "state" / "author_decisions.json").read_text(encoding="utf-8"))
+    assert len(decisions["decisions"]) == 1
+    assert decisions["decisions"][0]["forbidden_directions"] == ["不能让女主突然表白"]
+
+    # Verify future directions created
+    directions = json.loads((root / "state" / "future_direction_ledger.json").read_text(encoding="utf-8"))
+    assert len(directions["directions"]) == 2
+    assert directions["directions"][0]["description"] == "延续尾钩冲突"
+    assert directions["directions"][0]["status"] == "active"
+
+    # Verify relationship state updated
+    relations = json.loads((root / "state" / "relationship_state.json").read_text(encoding="utf-8"))
+    assert any("信任度" in h.get("delta", "") for h in relations["history"])
+
+
+def test_handoff_creates_json_and_md(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    result = generate_handoff(root, chapter_number=1)
+
+    assert Path(result["handoff_json"]).exists()
+    assert Path(result["handoff_md"]).exists()
+
+    from agent_writer.models import ChapterHandoff
+    handoff = ChapterHandoff.model_validate_json(Path(result["handoff_json"]).read_text(encoding="utf-8"))
+    assert handoff.from_chapter == 1
+    assert handoff.to_chapter == 2
+    assert "旧楼的第三声铃" in handoff.summary
+    assert "秦思妍" in handoff.character_states
+    assert handoff.hard_constraints  # should have strategy forbidden_moves
+
+    md = Path(result["handoff_md"]).read_text(encoding="utf-8")
+    assert "第1章 → 第2章 交接包" in md
+
+
+def test_plan_next_loads_handoff_and_author_decisions(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record author decision
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "keep_chapter": True,
+                "next_chapter_preferences": ["延续尾钩冲突"],
+                "forbidden_directions": ["不能让女主突然表白"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+    # Generate handoff
+    generate_handoff(root, chapter_number=1)
+
+    # Plan next chapter
+    result = plan_next_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+        characters=["秦思妍"],
+    )
+
+    assert result["handoff_loaded"] != "none"
+
+    # Verify contract has handoff context
+    from agent_writer.models import ChapterContract
+    contract = ChapterContract.model_validate_json(
+        (root / "chapter_contracts" / "chapter_0002_contract.json").read_text(encoding="utf-8")
+    )
+    assert contract.previous_handoff != ""
+    assert any("作者偏好" in op for op in contract.foreshadowing_ops)
+    assert "不能让女主突然表白" in contract.forbidden_beats
+
+
+def test_quality_gate_blocks_author_forbidden_direction(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record author decision with forbidden direction
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "forbidden_directions": ["突然表白"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+    # Plan chapter 2 with the forbidden direction in the draft
+    plan_chapter(
+        root,
+        chapter_number=2,
+        title="测试章",
+        goal="测试",
+        required_payoffs=["测试payoff"],
+        ending_hook="测试钩子",
+    )
+    draft = root / "drafts" / "chapter_0002_draft.md"
+    draft.write_text("秦思妍突然表白，说我喜欢你。\n\n测试payoff。\n\n测试钩子", encoding="utf-8")
+
+    review = review_chapter(root, chapter_number=2)
+    assert review.blocking is True
+    codes = {issue.code for issue in review.issues}
+    assert "author_forbidden_direction" in codes
+
+
+def test_write_prompt_includes_state_context(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Record author decision and handoff
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["延续尾钩"],
+                "forbidden_directions": ["不能突然表白"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+
+    # Plan chapter 2
+    plan_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+    )
+
+    # Write prompt should include state context
+    result = write_chapter_prompt(root, chapter_number=2)
+    prompt = Path(result["prompt"]).read_text(encoding="utf-8")
+    assert "记忆上下文" in prompt
+    assert "上一章交接" in prompt
+    assert "作者对第1章的确认意见" in prompt
+
+
+def test_foreshadowing_append_only(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Add a foreshadowing item manually
+    foreshadowing_path = root / "state" / "foreshadowing_ledger.json"
+    foreshadowing = json.loads(foreshadowing_path.read_text(encoding="utf-8"))
+    initial_count = len(foreshadowing["items"])
+    foreshadowing["items"].append(
+        {
+            "id": "FS-0001-01",
+            "content": "校牌背面的名字意味着什么",
+            "planted_chapter": 1,
+            "status": "active",
+        }
+    )
+    foreshadowing_path.write_text(json.dumps(foreshadowing, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # Record decision that resolves it
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "notes": "回收伏笔：校牌背面的名字意味着什么",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+
+    # Verify item is resolved, not deleted — total count unchanged
+    foreshadowing = json.loads(foreshadowing_path.read_text(encoding="utf-8"))
+    items = foreshadowing["items"]
+    assert len(items) == initial_count + 1
+    resolved = [i for i in items if i.get("id") == "FS-0001-01"]
+    assert len(resolved) == 1
+    assert resolved[0]["status"] == "resolved"
+    assert resolved[0]["resolution_chapter"] == 1
+
+
+def test_unconfirmed_directions_not_written(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # No decision file — just generate handoff
+    generate_handoff(root, chapter_number=1)
+
+    # Verify author_decisions.json still has empty decisions
+    decisions = json.loads((root / "state" / "author_decisions.json").read_text(encoding="utf-8"))
+    assert decisions["decisions"] == []
+
+    # Verify future_direction_ledger is still empty
+    directions = json.loads((root / "state" / "future_direction_ledger.json").read_text(encoding="utf-8"))
+    assert directions["directions"] == []
+
+
+def test_record_author_note_chapter_mismatch(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps({"chapter_number": 99, "keep_chapter": True}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="chapter_number"):
+        record_author_note(root, chapter_number=1, decision_file=decision_file)

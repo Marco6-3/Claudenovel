@@ -69,8 +69,22 @@ def evaluate_draft(
     draft_text: str,
     contract: ChapterContract,
     constraints: CharacterConstraints,
+    author_forbidden: list[str] | None = None,
 ) -> list[ReviewIssue]:
     issues: list[ReviewIssue] = []
+
+    # Check author explicitly forbidden directions
+    for direction in (author_forbidden or []):
+        if _contains(draft_text, direction):
+            issues.append(
+                ReviewIssue(
+                    code="author_forbidden_direction",
+                    severity="blocking",
+                    message=f"出现作者明确禁止的方向：{direction}",
+                    evidence=direction,
+                    repair_hint="作者已确认该方向不可用，必须用其他剧情替代。",
+                )
+            )
 
     for payoff in contract.required_payoffs:
         if not _contains(draft_text, payoff):
