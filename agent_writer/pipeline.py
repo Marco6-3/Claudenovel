@@ -533,22 +533,29 @@ def generate_discussion_packet(
     *,
     chapter_number: int,
 ) -> Path:
-    """Generate an author discussion packet for a committed chapter."""
+    """Generate an author discussion packet for a committed chapter.
+
+    Enhanced v2: structured like a usable writing meeting checklist with
+    embedded evidence IDs, foreshadowing tables, and a pre-filled JSON template.
+    """
     root = ensure_project(project_root)
     contract = read_model(_contract_path(root, chapter_number), ChapterContract)
     review_path = _review_path(root, chapter_number)
     review = read_model(review_path, ReviewResult) if review_path.exists() else None
     draft = read_text(_draft_path(root, chapter_number))
 
-    # Load foreshadowing for suggestions
+    # Load foreshadowing
     foreshadowing_path = root / "state" / "foreshadowing_ledger.json"
-    active_foreshadowing = []
+    active_foreshadowing: list[dict[str, object]] = []
+    resolved_foreshadowing: list[dict[str, object]] = []
     if foreshadowing_path.exists():
         foreshadowing = read_json(foreshadowing_path)
-        active_foreshadowing = [
-            item for item in foreshadowing.get("items", [])
-            if item.get("status", "active") == "active"
-        ]
+        for item in foreshadowing.get("items", []):
+            status = item.get("status", "active")
+            if status == "active":
+                active_foreshadowing.append(item)
+            elif status == "resolved":
+                resolved_foreshadowing.append(item)
 
     # Check for decision candidate
     candidate_path = _candidate_json_path(root, chapter_number)
@@ -559,147 +566,230 @@ def generate_discussion_packet(
         except (ValueError, KeyError):
             candidate = None
 
+    # Draft summary (first 300 chars)
+    draft_summary = draft[:300].replace("\n", " ").strip()
+    if len(draft) > 300:
+        draft_summary += "…"
+
     lines = [
         f"# 第{chapter_number}章 作者协商包",
         "",
-        f"## 本章信息",
+        "---",
         "",
-        f"- 标题：{contract.title}",
-        f"- 目标：{contract.main_goal}",
-        f"- 必须兑现：{', '.join(contract.required_payoffs)}",
-        f"- 尾钩：{contract.ending_hook}",
+        "## 一、本章总结",
+        "",
+        f"- **标题**：{contract.title}",
+        f"- **目标**：{contract.main_goal}",
+        f"- **必须兑现**：{', '.join(contract.required_payoffs)}",
+        f"- **尾钩**：{contract.ending_hook}",
+        f"- **草稿摘要**：{draft_summary}",
         "",
     ]
 
-    # Show decision candidate summary if available
+    # --- Decision candidate section (if available) ---
     if candidate:
+        source_label = ', '.join(candidate.source_files) if candidate.source_files else "无"
         lines.extend([
-            "## 分析系统生成的决策候选",
+            "## 二、分析系统决策候选",
             "",
-            f"> 来源文件：{', '.join(candidate.source_files) if candidate.source_files else '无'}",
+            f"> 来源：{source_label}",
             f"> 保留理由：{candidate.keep_reason}",
             "",
-            "以下为分析系统自动生成的候选内容，请勾选、修改或删除后确认。",
-            "",
         ])
+        # Keep evidence
+        if candidate.keep_evidence:
+            lines.append(f"> 保留证据：{', '.join(candidate.keep_evidence)}")
+            lines.append("")
+
+        # Modifications with evidence
         if candidate.modifications:
-            lines.append("### 建议修改")
+            lines.append("### 候选修改项")
             lines.append("")
             for i, mod in enumerate(candidate.modifications):
-                ev = candidate.modification_evidence[i] if i < len(candidate.modification_evidence) else "证据不足"
-                lines.append(f"- [ ] {mod}（证据：{ev}）")
+                ev = candidate.modification_evidence[i] if i < len(candidate.modification_evidence) else ""
+                ev_str = f" `{ev}`" if ev else ""
+                lines.append(f"- [ ] **修改 {i+1}**：{mod}{ev_str}")
             lines.append("")
+
+        # Next chapter directions
         if candidate.next_chapter_preferences:
-            lines.append("### 建议下一章方向")
+            lines.append("### 候选下一章方向")
             lines.append("")
             for i, pref in enumerate(candidate.next_chapter_preferences):
-                ev = candidate.preference_evidence[i] if i < len(candidate.preference_evidence) else "证据不足"
-                lines.append(f"- [ ] {pref}（证据：{ev}）")
+                ev = candidate.preference_evidence[i] if i < len(candidate.preference_evidence) else ""
+                ev_str = f" `{ev}`" if ev else ""
+                label = chr(65 + i)  # A, B, C...
+                lines.append(f"- [ ] **方向 {label}**：{pref}{ev_str}")
             lines.append("")
+
+        # Forbidden from candidate
         if candidate.forbidden_directions:
-            lines.append("### 建议禁区")
+            lines.append("### 候选禁区")
             lines.append("")
             for fd in candidate.forbidden_directions:
                 lines.append(f"- [ ] {fd}")
             lines.append("")
 
+    # --- Review issues ---
     lines.extend([
-        "## 本章可保留部分",
-        "",
-        "（请作者确认哪些部分值得保留）",
-        "",
-        "- [ ] 核心场景是否达到预期效果",
-        "- [ ] 角色行为是否符合设定",
-        "- [ ] 节奏和信息密度是否合适",
-        "",
-        "## 必须改掉的问题",
+        "## 三、审稿结果",
         "",
     ])
     if review and review.issues:
         for issue in review.issues:
-            lines.append(f"- [{issue.severity}] {issue.code}: {issue.message}")
+            lines.append(f"- **[{issue.severity}]** {issue.code}：{issue.message}")
+            if issue.repair_hint:
+                lines.append(f"  - 修复建议：{issue.repair_hint}")
     else:
         lines.append("- 审稿通过，无阻断项。")
+    lines.append("")
 
+    # --- Next chapter directions ---
     lines.extend([
+        "## 四、下一章方向（请选择或自定义）",
         "",
-        "## 下一章建议方向（请选择或自定义）",
+    ])
+    if candidate and candidate.next_chapter_preferences:
+        for i, pref in enumerate(candidate.next_chapter_preferences):
+            label = chr(65 + i)
+            ev = candidate.preference_evidence[i] if i < len(candidate.preference_evidence) else ""
+            ev_str = f"（证据：{ev}）" if ev else ""
+            lines.append(f"### 方向 {label}（来自分析）")
+            lines.append(f"- {pref}{ev_str}")
+            lines.append("")
+    else:
+        lines.extend([
+            "### 方向 A：延续当前冲突",
+            f"- 从本章尾钩「{contract.ending_hook}」直接展开",
+            "",
+            "### 方向 B：转换视角/场景",
+            "- 切换到另一条故事线",
+            "",
+            "### 方向 C：深化角色关系",
+            "- 用本章事件的后果推动角色互动",
+            "",
+        ])
+
+    # --- Foreshadowing tables ---
+    lines.extend([
+        "## 五、伏笔管理",
         "",
-        "### 方向 A：延续当前冲突",
-        f"- 从本章尾钩「{contract.ending_hook}」直接展开",
-        "- 保持当前紧张度，快速推进",
-        "",
-        "### 方向 B：转换视角/场景",
-        "- 切换到另一条故事线",
-        "- 给读者喘息空间，同时埋新伏笔",
-        "",
-        "### 方向 C：深化角色关系",
-        "- 用本章事件的后果推动角色互动",
-        "- 关系推进需要共同经历作为证据",
-        "",
-        "## 伏笔管理",
-        "",
-        "### 当前活跃伏笔",
+        "### 活跃伏笔",
         "",
     ])
     if active_foreshadowing:
+        lines.append("| ID | 内容 | 埋设章节 | 层级 | 操作建议 |")
+        lines.append("|-----|------|----------|------|----------|")
         for item in active_foreshadowing:
             eid = item.get("id", f"FS-{item.get('planted_chapter', '?')}")
-            lines.append(f"- [{eid}] {item.get('content', '')}")
+            content = item.get("content", "")
+            planted = item.get("planted_chapter", "?")
+            layer = item.get("layer", "支线")
+            lines.append(f"| {eid} | {content} | 第{planted}章 | {layer} | 继续/回收 |")
+        lines.append("")
     else:
         lines.append("- 暂无活跃伏笔。")
+        lines.append("")
 
+    # Recyclable foreshadowing (resolved, potentially useful)
+    lines.append("### 已回收伏笔（可参考）")
+    lines.append("")
+    if resolved_foreshadowing:
+        for item in resolved_foreshadowing[-5:]:  # Last 5
+            eid = item.get("id", "")
+            content = item.get("content", "")
+            resolved_at = item.get("resolution_chapter", "?")
+            lines.append(f"- [{eid}] {content}（回收于第{resolved_at}章）")
+        lines.append("")
+    else:
+        lines.append("- 暂无已回收伏笔。")
+        lines.append("")
+
+    # --- Confirmation checklist ---
     lines.extend([
+        "## 六、需要作者确认的问题",
         "",
-        "### 本章伏笔操作",
+        "请逐项确认或填写：",
+        "",
+        "### 本章评价",
+        "",
+        "- [ ] 本章保留（keep_chapter = true/false）",
+        "- [ ] 保留理由：______",
+        "",
+        "### 修改要求",
+        "",
+        "- [ ] 有无需要修改的问题？（如有，请列出）",
+        "",
+        "### 下一章方向",
+        "",
+        "- [ ] 选择哪个方向？（A/B/C 或自定义）",
+        "- [ ] 自定义方向（如不选以上）：______",
+        "",
+        "### 禁区",
+        "",
+        "- [ ] 下一章绝对不能出现的走向：______",
+        "",
+        "### 关系变化",
+        "",
+        "- [ ] 本章是否产生了关系变化？______",
+        "- [ ] 变化的证据/共同经历：______",
+        "",
+        "### 伏笔操作",
         "",
         "- [ ] 是否推进了已有伏笔？",
-        "- [ ] 是否新增了伏笔？（最多一个）",
-        "- [ ] 是否可以回收某个伏笔？",
+        "- [ ] 是否新增了伏笔？",
+        "- [ ] 是否回收了某个伏笔？",
         "",
-        "## 角色关系变化",
+        "### 下一章 Payoff",
         "",
-        "请确认本章是否产生了关系变化，以及变化的证据：",
+        "- [ ] 下一章必须兑现的读者收益：______",
         "",
-        "- 关系变化：______",
-        "- 证据/共同经历：______",
-        "",
-        "## 作者明确禁止的走向",
-        "",
-        "请列出下一章绝对不能出现的剧情走向：",
-        "",
-        "1. ______",
-        "2. ______",
-        "",
-        "## 下一章必须兑现的 payoff",
-        "",
-        "请列出下一章必须包含的读者收益：",
-        "",
-        "1. ______",
-        "",
+    ])
+
+    # --- Pre-filled JSON template ---
+    # Build template from candidate or defaults
+    template_prefs = []
+    template_forbidden = []
+    template_mods = []
+    template_evidence = []
+    if candidate:
+        template_prefs = candidate.next_chapter_preferences[:2]
+        template_forbidden = candidate.forbidden_directions[:2]
+        template_mods = candidate.modifications[:1]
+        template_evidence = candidate.keep_evidence[:3]
+
+    template: dict[str, object] = {
+        "chapter_number": chapter_number,
+        "keep_chapter": True,
+        "keep_reason": candidate.keep_reason if candidate else "待填写",
+        "modifications": template_mods if template_mods else ["待填写或留空"],
+        "next_chapter_preferences": template_prefs if template_prefs else ["待填写"],
+        "forbidden_directions": template_forbidden if template_forbidden else ["待填写或留空"],
+        "relationship_changes": [],
+        "evidence_refs": template_evidence,
+        "source": "analysis_derived" if candidate else "author_confirmed",
+        "notes": "",
+    }
+    template_json = json.dumps(template, ensure_ascii=False, indent=2)
+
+    lines.extend([
         "---",
         "",
-        "## 使用说明",
+        "## 七、快速提交",
         "",
-        "请将以上 `______` 部分填好，保存为 JSON 文件后运行：",
+        "将以下 JSON 保存为文件，编辑后运行命令提交：",
+        "",
+        "```json",
+        template_json,
+        "```",
         "",
         "```powershell",
         f"python agent_writer_cli.py record-author-note --chapter {chapter_number} --decision-file <your-file.json>",
         "```",
         "",
-        "JSON 格式示例：",
-        "```json",
-        "{",
-        '  "chapter_number": ' + str(chapter_number) + ',',
-        '  "keep_chapter": true,',
-        '  "keep_reason": "核心场景效果好",',
-        '  "modifications": ["第三段节奏太慢"],',
-        '  "next_chapter_preferences": ["延续尾钩冲突"],',
-        '  "forbidden_directions": ["不能让女主突然表白"],',
-        '  "relationship_changes": ["共同经历后信任度+1"],',
-        '  "notes": ""',
-        "}",
-        "```",
+        "---",
+        "",
+        f"*生成时间：{contract.title} 第{chapter_number}章协商包*",
     ])
 
     packet_path = write_text(_discussion_path(root, chapter_number), "\n".join(lines))

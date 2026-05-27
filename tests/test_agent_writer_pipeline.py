@@ -274,8 +274,13 @@ def test_discuss_generates_packet(tmp_path: Path) -> None:
     assert "方向 B" in content
     assert "方向 C" in content
     assert "伏笔管理" in content
-    assert "作者明确禁止的走向" in content
+    assert "需要作者确认的问题" in content
     assert "record-author-note" in content
+    # v2 sections
+    assert "本章总结" in content
+    assert "审稿结果" in content
+    assert "快速提交" in content
+    assert "草稿摘要" in content
 
 
 def test_record_author_note_updates_state_files(tmp_path: Path) -> None:
@@ -802,8 +807,60 @@ def test_discuss_references_decision_candidate(tmp_path: Path) -> None:
     content = packet_path.read_text(encoding="utf-8")
 
     assert "决策候选" in content
-    assert "建议修改" in content or "建议下一章方向" in content
+    assert "候选修改项" in content or "候选下一章方向" in content
     assert "CH001" in content
+    # v2: should include JSON template
+    assert "快速提交" in content
+    assert "chapter_number" in content
+
+
+def test_discuss_foreshadowing_table(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    # Add foreshadowing
+    fs_path = root / "state" / "foreshadowing_ledger.json"
+    fs = json.loads(fs_path.read_text(encoding="utf-8"))
+    fs["items"].append({
+        "id": "FS-0001-01",
+        "content": "校牌背面的名字",
+        "planted_chapter": 1,
+        "layer": "主线",
+        "status": "active",
+    })
+    fs["items"].append({
+        "id": "FS-0001-02",
+        "content": "旧楼的铃声来源",
+        "planted_chapter": 1,
+        "layer": "支线",
+        "status": "resolved",
+        "resolution_chapter": 1,
+    })
+    fs_path.write_text(json.dumps(fs, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    path = generate_discussion_packet(root, chapter_number=1)
+    content = path.read_text(encoding="utf-8")
+
+    # Active foreshadowing should be in table format
+    assert "活跃伏笔" in content
+    assert "FS-0001-01" in content
+    assert "校牌背面的名字" in content
+    # Resolved foreshadowing should appear in recyclable section
+    assert "已回收伏笔" in content
+    assert "FS-0001-02" in content
+
+
+def test_discuss_includes_evidence_ids_from_candidate(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+    analysis_dir = _make_analysis_dir(tmp_path)
+    draft_author_note(root, chapter_number=1, analysis_dir=analysis_dir)
+
+    path = generate_discussion_packet(root, chapter_number=1)
+    content = path.read_text(encoding="utf-8")
+
+    # Evidence IDs from candidate should be visible
+    assert "[CH001-P003]" in content or "[CH001-P007]" in content
 
 
 def test_draft_author_note_full_pipeline_smoke(tmp_path: Path) -> None:
