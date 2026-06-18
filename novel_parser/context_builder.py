@@ -5,8 +5,9 @@ import json
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Mapping, Sequence
 
+from .entity_resolver import count_entity_mentions
 from .structure import Chapter
 
 
@@ -60,16 +61,26 @@ def _paragraph_score(
     paragraph: str,
     terms: Sequence[str],
     focus_entities: Sequence[str],
+    entity_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> tuple[int, list[str]]:
     """Score paragraph relevance and return matched terms."""
     matched: list[str] = []
     score = 0
 
-    for entity in focus_entities:
-        count = paragraph.count(entity)
-        if count:
-            score += count * 8
-            matched.append(entity)
+    if entity_aliases:
+        canonical_focus = _canonical_focus_entities(focus_entities, entity_aliases)
+        entity_counts = count_entity_mentions(paragraph, entity_aliases)
+        for entity in canonical_focus:
+            count = entity_counts.get(entity, 0)
+            if count:
+                score += count * 8
+                matched.append(entity)
+    else:
+        for entity in focus_entities:
+            count = paragraph.count(entity)
+            if count:
+                score += count * 8
+                matched.append(entity)
 
     for term in terms:
         count = paragraph.count(term)
@@ -77,7 +88,12 @@ def _paragraph_score(
             score += count * 5
             matched.append(term)
 
-    if len(set(focus_entities) & set(matched)) >= 2:
+    focus_for_bonus = (
+        _canonical_focus_entities(focus_entities, entity_aliases)
+        if entity_aliases
+        else list(focus_entities)
+    )
+    if len(set(focus_for_bonus) & set(matched)) >= 2:
         score += 10
     if any(mark in paragraph for mark in ("说", "问", "笑", "看", "沉默", "点头")):
         score += 2
@@ -91,12 +107,31 @@ def _paragraph_score(
     return score, deduped
 
 
+def _canonical_focus_entities(
+    focus_entities: Sequence[str],
+    entity_aliases: Mapping[str, Sequence[str]],
+) -> list[str]:
+    canonical: list[str] = []
+    seen = set()
+    for entity in focus_entities:
+        mapped = entity
+        for name, aliases in entity_aliases.items():
+            if entity == name or entity in aliases:
+                mapped = name
+                break
+        if mapped and mapped not in seen:
+            canonical.append(mapped)
+            seen.add(mapped)
+    return canonical
+
+
 def collect_evidence(
     chapters: Sequence[Chapter],
     query: str = "",
     focus_entities: Sequence[str] | None = None,
     max_items: int = 80,
     excerpt_chars: int = 900,
+    entity_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> list[EvidenceItem]:
     """Collect the highest-signal citeable paragraphs for an analysis task."""
     focus = [x for x in (focus_entities or []) if x]
@@ -105,7 +140,7 @@ def collect_evidence(
 
     for chapter in chapters:
         for idx, paragraph in enumerate(chapter.paragraphs, start=1):
-            score, matched = _paragraph_score(paragraph, terms, focus)
+            score, matched = _paragraph_score(paragraph, terms, focus, entity_aliases=entity_aliases)
             if score <= 0:
                 continue
             items.append(
@@ -191,6 +226,7 @@ def export_context_pack(
     max_items: int = 80,
     excerpt_chars: int = 900,
     max_context_chars: int = 80000,
+    entity_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> dict:
     """Export JSON evidence and a prompt markdown file."""
     out_dir.mkdir(exist_ok=True)
@@ -200,6 +236,7 @@ def export_context_pack(
         focus_entities=focus_entities,
         max_items=max_items,
         excerpt_chars=excerpt_chars,
+        entity_aliases=entity_aliases,
     )
     evidence = _fit_items_to_budget(collected, max_context_chars)
 

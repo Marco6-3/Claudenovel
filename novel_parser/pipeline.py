@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from . import common_workflows, context_builder, entity, evaluator, llm_client, normalizer, relation, sentiment, structure
+from .entity_resolver import expand_focus_entities, merge_alias_maps
 
 
 def run_pipeline(
@@ -30,6 +31,7 @@ def run_pipeline(
     source_end: Optional[int] = None,
     source_max_chars: int = 0,
     apply_aliases: bool = True,
+    entity_aliases: Optional[Dict[str, List[str]]] = None,
 ) -> dict:
     """Run the full enhanced analysis pipeline."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -42,7 +44,17 @@ def run_pipeline(
     # 2. Structural parsing
     raw_chapters: List[structure.Chapter] = structure.parse_chapters(raw_structure_text)
     chapters: List[structure.Chapter] = structure.parse_chapters(text)
-    aliases = entity.discover_entity_aliases(chapters, include_builtin_present=apply_aliases)
+    seed_aliases = merge_alias_maps(
+        normalizer.ENTITY_ALIASES if apply_aliases else None,
+        entity_aliases,
+    )
+    discovered_aliases = entity.discover_entity_aliases(
+        chapters,
+        include_builtin_present=apply_aliases,
+        seed_aliases=seed_aliases,
+    )
+    aliases = merge_alias_maps(seed_aliases, discovered_aliases, entity_aliases)
+    expanded_focus_entities = expand_focus_entities(focus_entities or [], aliases)
 
     # 3. Entity stats (with aliases merged + scene-level cooccurrence)
     stats = entity.compute_entity_stats(chapters, aliases=aliases)
@@ -153,10 +165,11 @@ def run_pipeline(
             chapters,
             out_dir,
             query=context_query,
-            focus_entities=focus_entities or [],
+            focus_entities=expanded_focus_entities,
             max_items=context_max_items,
             excerpt_chars=context_excerpt_chars,
             max_context_chars=context_max_chars,
+            entity_aliases=aliases,
         )
 
     if common_workflow:
@@ -164,12 +177,13 @@ def run_pipeline(
             raw_chapters,
             out_dir,
             query=context_query,
-            focus_entities=focus_entities or [],
+            focus_entities=expanded_focus_entities,
             source_start=source_start,
             source_end=source_end,
             source_max_chars=source_max_chars,
             evidence_max_items=max(context_max_items, 120),
             evidence_excerpt_chars=max(context_excerpt_chars, 1200),
+            entity_aliases=aliases,
         )
 
     return {
@@ -186,5 +200,7 @@ def run_pipeline(
         "common_output": common_output,
         "llm_report_requested": llm_report,
         "llm_status": llm_status,
+        "entity_alias_count": len(aliases),
+        "explicit_entity_alias_count": len(entity_aliases or {}),
         "outputs": [p.name for p in out_dir.iterdir()],
     }

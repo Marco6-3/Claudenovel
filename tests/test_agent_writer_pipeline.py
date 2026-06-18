@@ -8,6 +8,7 @@ import pytest
 from agent_writer.pipeline import (
     commit_chapter,
     compare_memory_variants,
+    create_story_outline,
     draft_author_note,
     evaluate_workflow,
     generate_discussion_packet,
@@ -16,8 +17,10 @@ from agent_writer.pipeline import (
     init_project,
     index_report,
     plan_chapter,
+    plan_chapter_from_outline,
     plan_next_chapter,
     record_author_note,
+    revise_story_outline,
     review_chapter,
     rewrite_draft,
     status_report,
@@ -57,6 +60,83 @@ def test_init_and_plan_write_utf8_contract_files(tmp_path: Path) -> None:
     assert strategy["project_name"] == "测试书"
     assert contract["required_payoffs"] == ["找到染血校牌"]
     assert "禁止让模型假设已读未来章节" in contract["forbidden_beats"]
+
+
+def test_outline_init_creates_project_owned_outline(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+
+    result = create_story_outline(
+        root,
+        logline="主角在校园旧楼案件中追查被抹掉的名字。",
+        theme="证据比传闻更可靠",
+        volume_title="旧楼档案",
+        chapter_start=1,
+        chapter_end=3,
+        core_conflict="旧楼档案被人持续篡改",
+        climax="主角发现档案篡改者就在学生会",
+        major_characters=["陈默", "秦思妍"],
+        global_rules=["感情线只能由共同调查推进"],
+    )
+
+    assert Path(result["story_outline"]).exists()
+    outline = json.loads(Path(result["story_outline"]).read_text(encoding="utf-8"))
+    assert outline["logline"].startswith("主角在校园旧楼")
+    assert outline["volumes"][0]["chapter_end"] == 3
+    assert len(outline["volumes"][0]["chapters"]) == 3
+    assert "故事大纲" in (root / "story_bible" / "story_outline.md").read_text(encoding="utf-8")
+
+
+def test_outline_revision_and_plan_from_outline_feed_writer_prompt(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    create_story_outline(
+        root,
+        logline="主角在校园旧楼案件中追查被抹掉的名字。",
+        volume_title="旧楼档案",
+        chapter_start=1,
+        chapter_end=2,
+        core_conflict="旧楼档案被人持续篡改",
+        climax="档案名单被当场改写",
+        major_characters=["陈默", "秦思妍"],
+    )
+    revision_file = tmp_path / "outline_revision.json"
+    revision_file.write_text(
+        json.dumps(
+            {
+                "reason": "作者想把第一章改成更强的调查开局",
+                "forbidden_directions": ["不能让秦思妍突然表白"],
+                "chapter_updates": [
+                    {
+                        "chapter_number": 1,
+                        "title": "旧楼的第三声铃",
+                        "goal": "陈默进入旧楼确认第三声铃的来源",
+                        "required_payoffs": ["找到染血校牌"],
+                        "conflict": "有人提前清理过旧楼证据",
+                        "time_anchor": "周五放学后",
+                        "scene_beats": ["进入旧楼", "发现清理痕迹", "找到染血校牌"],
+                        "must_include": ["校牌背面有被刮掉的姓名栏"],
+                        "forbidden_beats": ["不能出现无证据信任"],
+                        "ending_hook": "校牌背面的名字被新刀痕刮掉",
+                        "characters": ["陈默", "秦思妍"],
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    revise_story_outline(root, revision_file=revision_file)
+    result = plan_chapter_from_outline(root, chapter_number=1)
+    prompt_result = write_chapter_prompt(root, chapter_number=1)
+
+    contract = json.loads(Path(result["contract"]).read_text(encoding="utf-8"))
+    prompt = Path(prompt_result["prompt"]).read_text(encoding="utf-8")
+
+    assert contract["title"] == "旧楼的第三声铃"
+    assert "story_outline" in contract["allowed_sources"]
+    assert "不能让秦思妍突然表白" in contract["forbidden_beats"]
+    assert "故事大纲与作者修订" in prompt
+    assert "校牌背面有被刮掉的姓名栏" in prompt
 
 
 def test_write_prompt_imports_draft_by_file_path(tmp_path: Path) -> None:
@@ -344,6 +424,13 @@ def test_handoff_creates_json_and_md(tmp_path: Path) -> None:
     assert "第1章 → 第2章 交接包" in md
 
 
+def test_handoff_requires_accepted_commit(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+
+    with pytest.raises(ValueError, match="accepted chapter"):
+        generate_handoff(root, chapter_number=1)
+
+
 def test_plan_next_loads_handoff_and_author_decisions(tmp_path: Path) -> None:
     root = _init(tmp_path)
     _commit_chapter_1(root)
@@ -388,6 +475,7 @@ def test_plan_next_loads_handoff_and_author_decisions(tmp_path: Path) -> None:
     assert contract.previous_handoff != ""
     assert any("作者偏好" in op for op in contract.foreshadowing_ops)
     assert "不能让女主突然表白" in contract.forbidden_beats
+    assert len(contract.forbidden_beats) == len(set(contract.forbidden_beats))
 
 
 def test_quality_gate_blocks_author_forbidden_direction(tmp_path: Path) -> None:
@@ -504,6 +592,65 @@ def test_foreshadowing_append_only(tmp_path: Path) -> None:
     assert len(resolved) == 1
     assert resolved[0]["status"] == "resolved"
     assert resolved[0]["resolution_chapter"] == 1
+
+
+def test_structured_foreshadowing_decisions_update_ledger(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+    foreshadowing_path = root / "state" / "foreshadowing_ledger.json"
+
+    add_file = tmp_path / "decision_add.json"
+    add_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "foreshadowing_decisions": [
+                    {
+                        "action": "add",
+                        "content": "墙缝里的铜钥匙",
+                        "layer": "主线",
+                        "expected_resolution_chapter": 3,
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=add_file)
+
+    data = json.loads(foreshadowing_path.read_text(encoding="utf-8"))
+    added = [item for item in data["items"] if item.get("content") == "墙缝里的铜钥匙"]
+    assert len(added) == 1
+    assert added[0]["status"] == "active"
+    assert added[0]["layer"] == "主线"
+
+    resolve_file = tmp_path / "decision_resolve.json"
+    resolve_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "foreshadowing_decisions": [
+                    {
+                        "action": "resolve",
+                        "id": added[0]["id"],
+                        "content": "墙缝里的铜钥匙",
+                        "resolution_note": "钥匙打开了档案柜",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=resolve_file)
+
+    data = json.loads(foreshadowing_path.read_text(encoding="utf-8"))
+    resolved = [item for item in data["items"] if item.get("id") == added[0]["id"]]
+    assert len(resolved) == 1
+    assert resolved[0]["status"] == "resolved"
+    assert resolved[0]["resolution_chapter"] == 1
+    assert resolved[0]["resolution_note"] == "钥匙打开了档案柜"
 
 
 def test_unconfirmed_directions_not_written(tmp_path: Path) -> None:
@@ -717,6 +864,89 @@ def test_draft_author_note_missing_files_degrade_gracefully(tmp_path: Path) -> N
     assert candidate.keep_reason == "证据不足：未找到分析证据文件"
     assert candidate.modifications == []
     assert candidate.next_chapter_preferences == []
+
+
+def test_draft_author_note_uses_review_evidence_pack_from_organized_output(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    task_root = tmp_path / "analysis_task"
+    data_dir = task_root / "data"
+    data_dir.mkdir(parents=True)
+    review_pack = {
+        "query": "评价并给出建议",
+        "focus_entities": ["陈默"],
+        "evidence_count": 2,
+        "evidence": [
+            {
+                "id": "CH001-P003",
+                "chapter_index": 1,
+                "chapter_title": "旧楼的第三声铃",
+                "paragraph_index": 3,
+                "chars": 85,
+                "score": 24,
+                "matched_terms": ["陈默", "旧楼"],
+                "excerpt": "陈默推开旧楼铁门，空气中弥漫着霉味。",
+            },
+            {
+                "id": "CH001-P007",
+                "chapter_index": 1,
+                "chapter_title": "旧楼的第三声铃",
+                "paragraph_index": 7,
+                "chars": 92,
+                "score": 18,
+                "matched_terms": ["校牌", "血"],
+                "excerpt": "平台上躺着一张校牌，照片被深褐色的血迹浸透。",
+            },
+        ],
+    }
+    (data_dir / "review_evidence_pack.json").write_text(
+        json.dumps(review_pack, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (data_dir / "llm_source_pack_manifest.json").write_text(
+        json.dumps({"chapter_count": 1, "chapters": []}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (task_root / "report.md").write_text(
+        "# 编辑诊断报告\n\n"
+        "## P0 问题\n\n"
+        "P0：第三段节奏过慢，信息密度不足 [CH001-P003]\n\n"
+        "## 后续剧情路线\n\n"
+        "### 方向 A\n"
+        "延续旧楼调查，深入挖掘校牌背后的秘密 [CH001-P007]\n",
+        encoding="utf-8",
+    )
+
+    result = draft_author_note(
+        root,
+        chapter_number=1,
+        analysis_dir=task_root,
+        strict=True,
+        min_evidence_count=2,
+    )
+
+    assert result["analysis_dir"].endswith("data")
+    assert "review_evidence_pack.json" in result["source_files"]
+    assert "llm_source_pack_manifest.json" in result["source_files"]
+    assert result["quality_warnings"] == []
+
+    from agent_writer.models import DecisionCandidate
+    candidate = DecisionCandidate.model_validate_json(
+        Path(result["candidate_json"]).read_text(encoding="utf-8")
+    )
+    assert candidate.keep_evidence == ["[CH001-P003]", "[CH001-P007]"]
+    assert candidate.quality_warnings == []
+
+
+def test_draft_author_note_strict_rejects_unstable_analysis(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+    empty_dir = tmp_path / "empty_analysis"
+    empty_dir.mkdir()
+
+    with pytest.raises(ValueError, match="严格模式"):
+        draft_author_note(root, chapter_number=1, analysis_dir=empty_dir, strict=True)
 
 
 def test_evidence_backed_decision_flows_into_handoff(tmp_path: Path) -> None:
@@ -1112,6 +1342,45 @@ def test_compare_memory_variants_d_has_more_than_a(tmp_path: Path) -> None:
     # D should have at least as much as A, often more
     assert len(d["constraints"]) >= len(a["constraints"])
     assert len(d["forbidden"]) >= len(a["forbidden"])
+
+
+def test_compare_memory_variants_baseline_excludes_memory_enrichment(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    _commit_chapter_1(root)
+
+    decision_file = tmp_path / "decision.json"
+    decision_file.write_text(
+        json.dumps(
+            {
+                "chapter_number": 1,
+                "next_chapter_preferences": ["延续尾钩冲突"],
+                "forbidden_directions": ["不能让女主突然表白"],
+                "evidence_refs": ["[CH001-P003]"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    record_author_note(root, chapter_number=1, decision_file=decision_file)
+    generate_handoff(root, chapter_number=1)
+    plan_next_chapter(
+        root,
+        chapter_number=2,
+        title="档案室的空座",
+        goal="主角追查校牌对应的人",
+        required_payoffs=["发现空座名单"],
+        ending_hook="名单最后一行被新墨水改写",
+    )
+
+    result = compare_memory_variants(root, chapter_number=1)
+    baseline = result["variants"][0]
+    full = result["variants"][3]
+
+    baseline_text = json.dumps(baseline, ensure_ascii=False)
+    assert "作者偏好" not in baseline_text
+    assert "[CH001-P003]" not in baseline_text
+    assert "不能让女主突然表白" not in baseline["constraints"]
+    assert "[CH001-P003]" in full["evidence"]
 
 
 def test_compare_memory_variants_missing_files(tmp_path: Path) -> None:

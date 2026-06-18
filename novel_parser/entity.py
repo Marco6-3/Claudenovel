@@ -4,12 +4,13 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter, defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence
 
+from .entity_resolver import count_entity_mentions, ordered_unique_entities
 from .normalizer import ENTITY_ALIASES
-from .structure import Chapter, Scene
+from .structure import Chapter
 
 
 CANONICAL_NAMES = list(ENTITY_ALIASES.keys())
@@ -45,6 +46,7 @@ def discover_entity_aliases(
     min_occurrences: int = 2,
     max_names: int = 80,
     include_builtin_present: bool = True,
+    seed_aliases: Optional[Dict[str, List[str]]] = None,
 ) -> Dict[str, List[str]]:
     """Discover likely character names from the current novel text.
 
@@ -54,6 +56,7 @@ def discover_entity_aliases(
     counts: Counter = Counter()
     pseg_counts: Counter = Counter()
     speaker_counts: Counter = Counter()
+    protected_names = set((seed_aliases or {}).keys())
 
     for ch in chapters:
         for d in ch.dialogues:
@@ -80,6 +83,13 @@ def discover_entity_aliases(
                 if n:
                     counts[name] += n
 
+    for canonical, aliases in (seed_aliases or {}).items():
+        for ch in chapters:
+            for term in [canonical, *(aliases or [])]:
+                n = ch.body.count(term)
+                if n:
+                    counts[canonical] += n
+
     counts.update(pseg_counts)
     for name, count in speaker_counts.items():
         if name in pseg_counts or (name and name[0] in COMMON_SURNAMES):
@@ -104,28 +114,41 @@ def discover_entity_aliases(
 
     for short in list(filtered):
         for long in list(filtered):
-            if short == long:
+            if short == long or short not in filtered or long not in filtered:
                 continue
             if len(short) >= 2 and long.startswith(short) and len(long) > len(short):
-                if long in filtered:
+                # Prefix fragments such as "陈汉" should not beat full names like
+                # "陈汉升". Keep explicit seed canonicals even when they are short.
+                if short in protected_names:
                     del filtered[long]
+                    continue
+                if filtered[long] >= filtered[short] * 0.5:
+                    del filtered[short]
+                    break
 
-    return {name: [] for name, _ in filtered.most_common(max_names)}
+    discovered = {name: [] for name, _ in filtered.most_common(max_names)}
+    if seed_aliases:
+        merged = dict(discovered)
+        for name, aliases in seed_aliases.items():
+            merged[name] = list(aliases or [])
+        return merged
+    return discovered
 
 
-def infer_speakers(chapters: List[Chapter], names: Optional[List[str]] = None) -> Counter:
+def infer_speakers(
+    chapters: List[Chapter],
+    aliases: Optional[Dict[str, Sequence[str]]] = None,
+) -> Counter:
     """Count how many times each entity is inferred as a dialogue speaker."""
-    if names is None:
-        names = CANONICAL_NAMES
+    if aliases is None:
+        aliases = {name: values for name, values in ENTITY_ALIASES.items()}
     speakers = Counter()
     for ch in chapters:
         for d in ch.dialogues:
             if d.speaker_hint:
-                # fuzzy match speaker_hint against names
-                for name in names:
-                    if name in d.speaker_hint or d.speaker_hint in name:
-                        speakers[name] += 1
-                        break
+                matched = ordered_unique_entities(d.speaker_hint, aliases)
+                if matched:
+                    speakers[matched[0]] += 1
     return speakers
 
 
@@ -140,7 +163,8 @@ def compute_entity_stats(
         aliases: Optional dict of {canonical_name: [aliases]}.
                  If None, uses the built-in ENTITY_ALIASES.
     """
-    names = list(aliases.keys()) if aliases is not None else CANONICAL_NAMES
+    if aliases is None:
+        aliases = {name: values for name, values in ENTITY_ALIASES.items()}
     occ = Counter()
     chapter_span: Dict[str, list] = defaultdict(lambda: [9999, 0, 0])
     scene_co = Counter()
@@ -149,8 +173,8 @@ def compute_entity_stats(
     for ch in chapters:
         vol_dist[ch.volume].update([])  # ensure volume exists
         present_in_chapter = set()
-        for name in names:
-            n = ch.body.count(name)
+        chapter_counts = count_entity_mentions(ch.body, aliases)
+        for name, n in chapter_counts.items():
             if n:
                 occ[name] += n
                 present_in_chapter.add(name)
@@ -159,14 +183,15 @@ def compute_entity_stats(
                 chapter_span[name][2] += 1
         # Scene-level co-occurrence (stricter than chapter-level)
         for sc in ch.scenes:
-            present = {name for name in names if sc.paragraphs and any(name in p for p in sc.paragraphs)}
+            scene_text = "\n".join(sc.paragraphs)
+            present = set(ordered_unique_entities(scene_text, aliases)) if scene_text else set()
             present_list = sorted(present)
             for i, a in enumerate(present_list):
                 for b in present_list[i + 1:]:
                     scene_co[tuple(sorted((a, b)))] += 1
         # Volume distribution
         for name in present_in_chapter:
-            vol_dist[ch.volume][name] += ch.body.count(name)
+            vol_dist[ch.volume][name] += chapter_counts[name]
 
     # Clean up spans
     clean_span = {}
@@ -177,7 +202,7 @@ def compute_entity_stats(
         occurrences=occ,
         chapter_span=clean_span,
         scene_cooccurrence=scene_co,
-        dialogue_speakers=infer_speakers(chapters, names),
+        dialogue_speakers=infer_speakers(chapters, aliases),
         volume_distribution=vol_dist,
     )
 

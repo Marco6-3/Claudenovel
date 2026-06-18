@@ -7,6 +7,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from .entity_resolver import find_entity_matches, ordered_unique_entities
+from .entity_resolver import alias_terms
 from .normalizer import ENTITY_ALIASES
 from .structure import Chapter
 
@@ -33,19 +35,49 @@ RELATION_VERBS: Dict[str, str] = {
 }
 
 
+def _relation_verb_pattern() -> re.Pattern[str]:
+    verbs = sorted(RELATION_VERBS.keys(), key=len, reverse=True)
+    return re.compile("(" + "|".join(map(re.escape, verbs)) + ")")
+
+
 def _extract_entities_in_window(
-    text: str, center: int, radius: int = 40, names: Optional[Set[str]] = None,
+    text: str,
+    center: int,
+    radius: int = 40,
+    names: Optional[Set[str]] = None,
+    aliases: Optional[Dict[str, List[str]]] = None,
 ) -> List[str]:
-    if names is None:
-        names = CANONICAL_NAMES
+    if aliases is None:
+        if names is None:
+            names = CANONICAL_NAMES
+        aliases = {name: [] for name in names}
     start = max(0, center - radius)
     end = min(len(text), center + radius)
     window = text[start:end]
-    found = sorted(
-        (name for name in names if name in window),
-        key=lambda name: window.find(name),
-    )
-    return found
+    return ordered_unique_entities(window, aliases)
+
+
+def _extract_relation_entities_in_window(
+    text: str,
+    center: int,
+    radius: int = 60,
+    aliases: Optional[Dict[str, List[str]]] = None,
+) -> List[str]:
+    if aliases is None:
+        aliases = {name: values for name, values in ENTITY_ALIASES.items()}
+    start = max(0, center - radius)
+    end = min(len(text), center + radius)
+    window = text[start:end]
+    local_center = center - start
+    matches = find_entity_matches(window, aliases)
+    left = sorted((m for m in matches if m.end <= local_center), key=lambda m: m.end, reverse=True)
+    right = sorted((m for m in matches if m.start >= local_center), key=lambda m: m.start)
+    if left and right and left[0].canonical != right[0].canonical:
+        return [left[0].canonical, right[0].canonical]
+    if len(left) >= 2 and left[0].canonical != left[1].canonical:
+        return [left[1].canonical, left[0].canonical]
+    ordered = ordered_unique_entities(window, aliases)
+    return ordered[:2]
 
 
 def extract_relations_rule(
@@ -59,16 +91,15 @@ def extract_relations_rule(
         aliases: Optional dict of {canonical_name: [aliases]}.
                  If None, uses the built-in ENTITY_ALIASES.
     """
-    names = set(aliases.keys()) if aliases is not None else CANONICAL_NAMES
+    if aliases is None:
+        aliases = {name: values for name, values in ENTITY_ALIASES.items()}
     triples = []
-    verb_pattern = re.compile(
-        "(" + "|".join(map(re.escape, RELATION_VERBS.keys())) + ")"
-    )
+    verb_pattern = _relation_verb_pattern()
     for ch in chapters:
         for m in verb_pattern.finditer(ch.body):
             verb = m.group(0)
             rel_type = RELATION_VERBS[verb]
-            nearby = _extract_entities_in_window(ch.body, m.start(), 60, names)
+            nearby = _extract_relation_entities_in_window(ch.body, m.start(), 60, aliases=aliases)
             if len(nearby) >= 2:
                 triples.append((nearby[0], rel_type, nearby[1]))
     return triples
@@ -80,17 +111,16 @@ def extract_relation_events_rule(
     window_radius: int = 60,
 ) -> List[Dict[str, Any]]:
     """Extract relation events with chapter and paragraph evidence metadata."""
-    names = set(aliases.keys()) if aliases is not None else CANONICAL_NAMES
+    if aliases is None:
+        aliases = {name: values for name, values in ENTITY_ALIASES.items()}
     events: List[Dict[str, Any]] = []
-    verb_pattern = re.compile(
-        "(" + "|".join(map(re.escape, RELATION_VERBS.keys())) + ")"
-    )
+    verb_pattern = _relation_verb_pattern()
     for ch in chapters:
         for paragraph_index, paragraph in enumerate(ch.paragraphs, start=1):
             for m in verb_pattern.finditer(paragraph):
                 verb = m.group(0)
                 rel_type = RELATION_VERBS[verb]
-                nearby = _extract_entities_in_window(paragraph, m.start(), window_radius, names)
+                nearby = _extract_relation_entities_in_window(paragraph, m.start(), window_radius, aliases=aliases)
                 if len(nearby) < 2:
                     continue
                 subject, obj = nearby[0], nearby[1]
@@ -115,7 +145,9 @@ def extract_relations_jieba(
     """Jieba-enhanced: one POS-tag pass per chapter, then scan (nr, verb, nr) patterns.
     Much faster than per-window tagging (~30-60s for 1.3M chars total)."""
     global JIEBA_BACKEND
-    names = set(aliases.keys()) if aliases is not None else CANONICAL_NAMES
+    if aliases is None:
+        aliases = {name: values for name, values in ENTITY_ALIASES.items()}
+    term_to_canonical = dict(alias_terms(aliases))
 
     try:
         import jieba_fast as jieba
@@ -132,8 +164,8 @@ def extract_relations_jieba(
             JIEBA_BACKEND = "unavailable"
             return []
 
-    for name in names:
-        jieba.add_word(name, tag="nr")
+    for term in term_to_canonical:
+        jieba.add_word(term, tag="nr")
 
     triples = []
     verb_set = set(RELATION_VERBS.keys())
@@ -143,15 +175,19 @@ def extract_relations_jieba(
         i = 0
         while i < len(words):
             w = words[i]
-            if w.flag == "nr" and w.word in names:
+            if w.flag == "nr" and w.word in term_to_canonical:
                 # look forward for a verb then another nr within next 12 words
                 for j in range(i + 1, min(i + 12, len(words))):
                     mid = words[j]
                     if mid.word in verb_set and mid.flag.startswith("v"):
                         for k in range(j + 1, min(j + 8, len(words))):
                             end_w = words[k]
-                            if end_w.flag == "nr" and end_w.word in names:
-                                triples.append((w.word, RELATION_VERBS[mid.word], end_w.word))
+                            if end_w.flag == "nr" and end_w.word in term_to_canonical:
+                                triples.append((
+                                    term_to_canonical[w.word],
+                                    RELATION_VERBS[mid.word],
+                                    term_to_canonical[end_w.word],
+                                ))
                                 i = k  # advance to avoid duplicate overlap
                                 break
                         break

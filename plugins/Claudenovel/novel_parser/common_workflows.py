@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict
 from pathlib import Path
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from .context_builder import collect_evidence
 from .normalizer import ENTITY_ALIASES
@@ -263,6 +263,7 @@ def export_common_workflows(
     source_max_chars: int = 0,
     evidence_max_items: int = 120,
     evidence_excerpt_chars: int = 1200,
+    entity_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> dict:
     """Export the most frequently used LLM analysis files."""
     out_dir.mkdir(exist_ok=True)
@@ -288,6 +289,7 @@ def export_common_workflows(
         focus_entities=_expand_focus_entities(focus_entities),
         max_items=evidence_max_items,
         excerpt_chars=evidence_excerpt_chars,
+        entity_aliases=entity_aliases,
     )
     evidence_path = out_dir / "review_evidence_pack.json"
     evidence_path.write_text(

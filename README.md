@@ -14,6 +14,7 @@ Claudenovel 是一个面向中文长篇小说的分析、诊断和写作辅助�
 - 生成编辑诊断提示词，用于深度改稿、剧情路线和续写建议。
 - 针对具体问题生成证据矩阵，例如“某角色是否抛弃另一方”“结局选择是否合理”。
 - 支持单章改写、章节续写和独立的 agent 写作闭环。
+- 支持项目内大纲、卷纲、章纲、作者修订记录，并让 agent 按这些文件生成章节合同和正文。
 
 ## 适合场景
 
@@ -22,6 +23,7 @@ Claudenovel 是一个面向中文长篇小说的分析、诊断和写作辅助�
 - 想把大体量小说整理成可引用、可追溯的分析资料。
 - 想围绕某条人物线、感情线或结局争议做证据化问答。
 - 想搭建“章节合同 -> 生成 -> 审稿 -> 返修 -> 人工提交”的写作流程。
+- 想先生成小说大纲，再随时微调大纲和禁区，让 agent 按确认后的设定继续创作。
 
 ## 快速开始
 
@@ -126,7 +128,18 @@ python continue_novel.py --report "report.md" --route 0 --novel "full.txt"
 ```powershell
 python -X utf8 agent_writer_cli.py --project-root .agent-demo init --name "测试书" --genre "都市异能" --premise "主角调查旧楼铃声" --target-reader "男频都市读者"
 
-python -X utf8 agent_writer_cli.py --project-root .agent-demo plan --chapter 1 --title "旧楼的第三声铃" --goal "主角进入旧楼确认铃声来源" --payoff "找到染血校牌" --ending-hook "校牌背面出现主角的名字" --character "秦思妍"
+python -X utf8 agent_writer_cli.py --project-root .agent-demo outline-init `
+  --logline "主角在校园旧楼案件中追查被抹掉的名字" `
+  --volume-title "旧楼档案" `
+  --chapter-start 1 `
+  --chapter-end 10 `
+  --core-conflict "旧楼档案被人持续篡改" `
+  --climax "主角发现篡改者就在学生会" `
+  --character "陈默" `
+  --character "秦思妍"
+
+python -X utf8 agent_writer_cli.py --project-root .agent-demo outline-revise --revision-file outline_revision.json
+python -X utf8 agent_writer_cli.py --project-root .agent-demo plan-from-outline --chapter 1
 
 python -X utf8 agent_writer_cli.py --project-root .agent-demo generate --chapter 1
 python -X utf8 agent_writer_cli.py --project-root .agent-demo review --chapter 1
@@ -156,10 +169,9 @@ README 只作为人类入口页；agent 的触发词、执行步骤和验收标�
 - `answer_question.py`：针对具体文学判断的证据化问答入口。
 - `rewrite_chapter.py`：章节改写入口。
 - `continue_novel.py`：续写入口。
-- `agent_writer/`：单章写作 agent 子系统。
+- `agent_writer/`：项目内大纲、作者修订、章节合同和写作 agent 子系统。
 - `skills/`：本仓库的 agent skill 定义。
 - `plugins/Claudenovel/`：插件化后的可分发运行包。
-- `webnovel-writer/`：并入的原 `webnovel-writer` 子项目，保留其原始结构和历史。
 
 ## 模型配置
 

@@ -1,0 +1,21 @@
+{
+  "title": "Agent 工作流规则包",
+  "source": "novel-research/novle1/10-Agent工作流完整方案.md",
+  "principles": [
+    "章纲先行、关键句锚定、审稿必做、中间数据持久化",
+    "RAG 和状态只提供证据，剧情决策由作者策略与章节合同决定",
+    "返修最多应回到失败层，不重跑已通过的上游层",
+    "人工确认前不得进入正式 accepted 目录"
+  ],
+  "checks": [
+    "初稿是否来自 writer prompt",
+    "review_result 是否结构化落盘",
+    "rewrite brief 是否引用具体阻断原因",
+    "commit 是否同步状态、关系、伏笔和索引"
+  ],
+  "blocking_rules": [
+    "未人工确认直接提交",
+    "写后回写失败但章号推进",
+    "隐藏/未来章节进入生成 prompt"
+  ]
+}

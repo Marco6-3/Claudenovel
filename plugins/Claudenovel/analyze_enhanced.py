@@ -7,6 +7,7 @@ from pathlib import Path
 
 from novel_parser.output_layout import build_organized_output, write_main_report
 from novel_parser.pipeline import run_pipeline
+from novel_parser.entity_resolver import load_alias_map
 
 
 ROOT = Path(__file__).resolve().parent
@@ -91,6 +92,12 @@ def main() -> None:
         help="Focus entity/name to prioritize. Can be repeated.",
     )
     parser.add_argument(
+        "--entity-aliases",
+        type=Path,
+        default=None,
+        help="JSON alias map for external novels, e.g. {\"陈汉升\": [\"小陈\"]}.",
+    )
+    parser.add_argument(
         "--context-max-items",
         type=int,
         default=80,
@@ -160,6 +167,7 @@ def main() -> None:
     task_name = args.context_query or args.output_name or "小说分析"
     layout = build_organized_output(args.txt_path, task_name, args.out_dir) if args.organized_output else None
     output_dir = layout.data_dir if layout else (args.out_dir or OUT)
+    entity_aliases = load_alias_map(args.entity_aliases) if args.entity_aliases else None
 
     result = run_pipeline(
         args.txt_path,
@@ -183,6 +191,7 @@ def main() -> None:
         source_end=args.source_end,
         source_max_chars=args.source_max_chars,
         apply_aliases=apply_aliases,
+        entity_aliases=entity_aliases,
     )
     if args.llm_context_report:
         from novel_parser import llm_client
