@@ -1,0 +1,61 @@
+{
+  "case_id": "after_chapter_11",
+  "status": "selected",
+  "selected_branches": [
+    "branch_01",
+    "branch_02"
+  ],
+  "pass_selections": {
+    "forward": [
+      "branch_01",
+      "branch_02"
+    ],
+    "reverse": [
+      "branch_02",
+      "branch_03"
+    ],
+    "rotate": [
+      "branch_01",
+      "branch_02"
+    ]
+  },
+  "selection_votes": {
+    "branch_01+branch_02": 2,
+    "branch_02+branch_03": 1
+  },
+  "diagnostic_averages": {
+    "branch_01": {
+      "scores": {
+        "contract_fidelity": 8.633,
+        "causal_completeness": 8.8,
+        "character_agency": 9.1,
+        "cost_and_consequence": 8.9,
+        "branch_distinctiveness": 9.067
+      },
+      "weighted_score": 8.842,
+      "hard_gate_passed": true
+    },
+    "branch_02": {
+      "scores": {
+        "contract_fidelity": 8.667,
+        "causal_completeness": 8.167,
+        "character_agency": 9.367,
+        "cost_and_consequence": 9.533,
+        "branch_distinctiveness": 9.3
+      },
+      "weighted_score": 8.897,
+      "hard_gate_passed": true
+    },
+    "branch_03": {
+      "scores": {
+        "contract_fidelity": 9.433,
+        "causal_completeness": 8.933,
+        "character_agency": 9.033,
+        "cost_and_consequence": 8.467,
+        "branch_distinctiveness": 8.333
+      },
+      "weighted_score": 8.963,
+      "hard_gate_passed": true
+    }
+  }
+}

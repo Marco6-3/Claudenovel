@@ -1,0 +1,13 @@
+{
+  "case_id": "after_chapter_11_branch01_vs_direct02",
+  "status": "judge_uncertain",
+  "official_winner": null,
+  "pass_winners": {
+    "forward": "branch_01",
+    "reverse": "direct_02"
+  },
+  "confidences": {
+    "forward": 0.84,
+    "reverse": 0.84
+  }
+}

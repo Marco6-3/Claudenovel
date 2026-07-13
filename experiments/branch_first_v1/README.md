@@ -21,3 +21,23 @@ python -X utf8 experiments/branch_first_v1/prepare_branch_prompts.py \
 ```
 
 Writer、Planner 和独立 Judge 都不得读取 benchmark private 目录、目标原章、其他 Planner 的卡片或匿名映射。
+
+## 已归档试运行
+
+`runs/pilot_2026-07-13/` 保存第 11、16 章后两个切点的完整实验链：Planner prompt、Branch Card、选择 prompt、匿名映射、原始判断、扩写正文、交换顺序正文评审、与 Direct-best 的对比评审及报告。它依赖：
+
+```text
+experiments/difu_early_continuation_v1/runs/pilot_2026-07-13/
+```
+
+下一次 clone 后可先重跑结构校验：
+
+```bash
+python -X utf8 experiments/branch_first_v1/validate_branch_cards.py \
+  --run-dir experiments/branch_first_v1/runs/pilot_2026-07-13 \
+  --public-run experiments/difu_early_continuation_v1/runs/pilot_2026-07-13 \
+  --case after_chapter_11 \
+  --case after_chapter_16
+```
+
+两个切点的聚合结果已经随 run bundle 保存。下一轮应沿用同一目录契约，继续 `after_chapter_1`、`after_chapter_4`、`after_chapter_22` 和 `after_chapter_26`，并先加入六轴事件指纹门和“先独评、后比较”的 Judge 协议。

@@ -1,0 +1,13 @@
+{
+  "case_id": "after_chapter_16_branch03_vs_direct01",
+  "status": "selected",
+  "official_winner": "branch_03",
+  "pass_winners": {
+    "forward": "branch_03",
+    "reverse": "branch_03"
+  },
+  "confidences": {
+    "forward": 0.92,
+    "reverse": 0.9
+  }
+}

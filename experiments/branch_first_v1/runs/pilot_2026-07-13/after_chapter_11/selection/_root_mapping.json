@@ -1,0 +1,27 @@
+{
+  "case_id": "after_chapter_11",
+  "passes": {
+    "forward": {
+      "A": "branch_01",
+      "B": "branch_02",
+      "C": "branch_03"
+    },
+    "reverse": {
+      "A": "branch_03",
+      "B": "branch_02",
+      "C": "branch_01"
+    },
+    "rotate": {
+      "A": "branch_02",
+      "B": "branch_03",
+      "C": "branch_01"
+    }
+  },
+  "weights": {
+    "contract_fidelity": 0.35,
+    "causal_completeness": 0.2,
+    "character_agency": 0.15,
+    "cost_and_consequence": 0.15,
+    "branch_distinctiveness": 0.15
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "case_id": "after_chapter_16_branch03_vs_direct02",
+  "passes": {
+    "forward": {
+      "A": "branch_03",
+      "B": "direct_02"
+    },
+    "reverse": {
+      "A": "direct_02",
+      "B": "branch_03"
+    }
+  },
+  "dimensions": [
+    "idea_fidelity",
+    "causal_progression",
+    "character_choice_and_cost",
+    "unit_arc",
+    "prose_and_voice",
+    "originality"
+  ]
+}
