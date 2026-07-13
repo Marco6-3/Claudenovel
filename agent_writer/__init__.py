@@ -1,7 +1,8 @@
-"""Independent file-first webnovel agent writing system."""
+"""External-idea-first, file-audited single-unit writing system."""
 
 from .pipeline import (
     commit_chapter,
+    generate_best_of_n,
     generate_draft,
     init_project,
     index_report,
@@ -15,6 +16,7 @@ from .pipeline import (
 
 __all__ = [
     "commit_chapter",
+    "generate_best_of_n",
     "generate_draft",
     "init_project",
     "index_report",

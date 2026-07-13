@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -19,7 +20,6 @@ DIRS = (
     "reviews",
     "accepted",
     "commits",
-    "state",
 )
 
 
@@ -36,6 +36,14 @@ def ensure_project(root: Path) -> Path:
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    return sha256_text(read_text(path))
 
 
 def write_text(path: Path, text: str) -> Path:

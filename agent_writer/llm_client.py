@@ -27,12 +27,22 @@ class LLMConfig:
     timeout: int = 120
 
     @classmethod
-    def from_env(cls, project_root: Path | None = None) -> "LLMConfig":
+    def from_env(cls, project_root: Path | None = None, *, role: str | None = None) -> "LLMConfig":
         load_env(project_root)
-        base_url = first_env("LLM_BASE_URL", "OPENAI_BASE_URL", "DEEPSEEK_BASE_URL", default="")
-        model = first_env("LLM_MODEL", "OPENAI_MODEL", "DEEPSEEK_MODEL", default="")
-        api_key = first_env("LLM_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY", default="")
-        timeout_raw = first_env("LLM_TIMEOUT", default="120")
+        role_prefix = role.strip().upper() if role else ""
+        base_names = ["LLM_BASE_URL", "OPENAI_BASE_URL", "DEEPSEEK_BASE_URL"]
+        model_names = ["LLM_MODEL", "OPENAI_MODEL", "DEEPSEEK_MODEL"]
+        key_names = ["LLM_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY"]
+        timeout_names = ["LLM_TIMEOUT"]
+        if role_prefix:
+            base_names.insert(0, f"{role_prefix}_BASE_URL")
+            model_names.insert(0, f"{role_prefix}_MODEL")
+            key_names.insert(0, f"{role_prefix}_API_KEY")
+            timeout_names.insert(0, f"{role_prefix}_TIMEOUT")
+        base_url = first_env(*base_names, default="")
+        model = first_env(*model_names, default="")
+        api_key = first_env(*key_names, default="")
+        timeout_raw = first_env(*timeout_names, default="120")
         if not base_url:
             raise LLMConfigError("missing LLM_BASE_URL or OPENAI_BASE_URL")
         if not model:
@@ -115,5 +125,5 @@ class OpenAICompatibleClient:
         return json.loads(text)
 
 
-def build_client(project_root: Path | None = None) -> OpenAICompatibleClient:
-    return OpenAICompatibleClient(LLMConfig.from_env(project_root))
+def build_client(project_root: Path | None = None, *, role: str | None = None) -> OpenAICompatibleClient:
+    return OpenAICompatibleClient(LLMConfig.from_env(project_root, role=role))

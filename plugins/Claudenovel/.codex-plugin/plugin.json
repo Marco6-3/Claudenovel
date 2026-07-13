@@ -1,7 +1,7 @@
 {
   "name": "claudenovel",
-  "version": "0.1.0",
-  "description": "证据化中文小说分析、编辑诊断、章节改写与续写插件",
+  "version": "0.2.0",
+  "description": "证据化中文小说分析与单章改写插件",
   "author": {
     "name": "mingzhe Liu"
   },
@@ -13,15 +13,15 @@
     "webnovel",
     "chinese-writing",
     "editorial-analysis",
-    "continuation",
+    "single-chapter-rewrite",
     "rag",
     "deepseek"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Claudenovel",
-    "shortDescription": "证据化小说分析、改写和续写工作流",
-    "longDescription": "把 Claudenovel 的 Python 分析、编辑报告、章节改写和续写脚本封装为 Codex 可发现的插件技能。核心脚本仍在仓库根目录执行，插件只负责固定 agent 工作流和验收标准。",
+    "shortDescription": "证据化小说分析和单章改写工作流",
+    "longDescription": "把 Claudenovel 的 Python 分析、编辑报告和单章改写脚本封装为 Codex 可发现的插件技能；不提供无人值守续章。",
     "developerName": "mingzhe Liu",
     "category": "Productivity",
     "capabilities": [
@@ -31,7 +31,7 @@
     ],
     "defaultPrompt": [
       "分析这部小说并生成编辑诊断报告",
-      "按报告中的路线续写下一章",
+      "围绕人类提供的创意审查并改写这个单章",
       "审查并改写这个章节"
     ],
     "brandColor": "#2563EB"

@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS review_issues (
     repair_hint TEXT NOT NULL DEFAULT ''
 );
 
-CREATE TABLE IF NOT EXISTS state_events (
+CREATE TABLE IF NOT EXISTS commit_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     chapter_number INTEGER NOT NULL,
     event_type TEXT NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS state_events (
 
 
 def index_path(project_root: Path) -> Path:
-    return project_root / "state" / "agent_writer.db"
+    return project_root / ".agent_writer" / "index.db"
 
 
 def connect(project_root: Path) -> sqlite3.Connection:
@@ -109,8 +109,8 @@ def save_commit(project_root: Path, commit: ChapterCommit, path: Path | str) -> 
             (commit.chapter_number, str(path)),
         )
         conn.execute(
-            "INSERT INTO state_events(chapter_number, event_type, payload) VALUES (?, ?, ?)",
-            (commit.chapter_number, "chapter_accepted", commit.model_dump_json()),
+            "INSERT INTO commit_events(chapter_number, event_type, payload) VALUES (?, ?, ?)",
+            (commit.chapter_number, "unit_accepted", commit.model_dump_json()),
         )
 
 

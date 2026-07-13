@@ -14,7 +14,7 @@ allowed-tools: Read Bash
 
 1. 用 `claudenovel-analyze` 分析当前小说片段、人物关系和伏笔。
 2. 用本 skill 检索或补充相似高热桥段机制。
-3. 生成 `inspiration_brief.md`，交给续写、规划或章节改写 agent。
+3. 生成 `inspiration_brief.md`，由人类选择后转写为当前单元的 `IdeaContract`；未经确认不能直接生成正文。
 
 ## 入口
 

@@ -1,7 +1,7 @@
 {
   "name": "claudenovel",
-  "version": "0.1.0",
-  "description": "证据化中文小说分析、编辑诊断、章节改写与续写插件",
+  "version": "0.2.0",
+  "description": "外部创意驱动的中文单元写作与证据化章节分析插件",
   "author": {
     "name": "mingzhe Liu"
   },
@@ -13,7 +13,7 @@
     "webnovel",
     "chinese-writing",
     "editorial-analysis",
-    "continuation",
+    "single-unit-writing",
     "rag",
     "deepseek"
   ]

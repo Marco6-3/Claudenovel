@@ -1,0 +1,22 @@
+{
+  "schema_version": "single-unit-rubric/v1",
+  "hard_gate": [
+    "idea_locks_present",
+    "forbidden_changes_absent",
+    "local_arc_paid_off",
+    "no_meta_or_placeholders"
+  ],
+  "dimensions": {
+    "idea_fidelity": {"weight": 0.30},
+    "unit_arc": {"weight": 0.20},
+    "character_causality": {"weight": 0.15},
+    "scene_and_prose": {"weight": 0.15},
+    "emotional_payoff": {"weight": 0.10},
+    "originality": {"weight": 0.10}
+  },
+  "pairwise_protocol": {
+    "swap_order": true,
+    "require_consistent_winner": true,
+    "hide_condition_and_model": true
+  }
+}

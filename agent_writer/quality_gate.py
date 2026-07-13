@@ -9,7 +9,7 @@ COERCION_PATTERNS = [
     re.compile(pattern)
     for pattern in (
         r"不.{0,8}就.{0,8}(堵|威胁|曝光|公开|逼)",
-        r"(威胁|逼迫|强迫|围观|舆论逼迫|公开羞辱)",
+        r"(威胁|逼迫|强迫(?!自己)|围观|舆论逼迫|公开羞辱)",
         r"(堵你|堵她|堵在门口|天天堵)",
     )
 ]
@@ -61,7 +61,11 @@ def _semantic_contains(text: str, needle: str) -> bool:
     if "染血校牌" in needle:
         return "校牌" in text and "血" in text and any(token in text for token in ("找", "发现", "躺着", "捡", "翻"))
     if "校牌背面" in needle and "名字" in needle:
-        return "校牌" in text and "背面" in text and "名字" in text
+        has_name_reveal = any(
+            token in text
+            for token in ("名字", "姓名", "姓名栏", "三个字", "三道刚被刻")
+        )
+        return "校牌" in text and "背面" in text and has_name_reveal
     return False
 
 
@@ -71,6 +75,32 @@ def evaluate_draft(
     constraints: CharacterConstraints,
 ) -> list[ReviewIssue]:
     issues: list[ReviewIssue] = []
+
+    payoff_and_ending = {*contract.required_payoffs, contract.ending_hook}
+    for idea_lock in contract.idea_contract.idea_locks:
+        if idea_lock in payoff_and_ending:
+            continue
+        if not _contains(draft_text, idea_lock):
+            issues.append(
+                ReviewIssue(
+                    code="missing_idea_lock",
+                    severity="blocking",
+                    message=f"缺失外部创意锁：{idea_lock}",
+                    repair_hint="回到人类提供的外部创意补写该核心要求；不得用另一个点子替代。",
+                )
+            )
+
+    for forbidden_change in contract.idea_contract.forbidden_changes:
+        if _contains(draft_text, forbidden_change):
+            issues.append(
+                ReviewIssue(
+                    code="forbidden_idea_change",
+                    severity="blocking",
+                    message=f"出现外部创意明确禁止的改动：{forbidden_change}",
+                    evidence=forbidden_change,
+                    repair_hint="删除该改动，并在 freedom_budget 范围内重新实现原始创意。",
+                )
+            )
 
     for payoff in contract.required_payoffs:
         if not _contains(draft_text, payoff):

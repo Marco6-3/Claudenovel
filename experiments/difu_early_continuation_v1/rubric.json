@@ -1,0 +1,32 @@
+{
+  "schema_version": "difu-early-rubric/v1",
+  "hard_gate": [
+    "public_idea_locks_present",
+    "public_forbidden_changes_absent",
+    "no_contradiction_with_visible_context",
+    "no_private_gold_or_target_access",
+    "no_meta_or_placeholders"
+  ],
+  "independent_quality": {
+    "context_continuity": 0.20,
+    "causal_progression": 0.20,
+    "character_consistency": 0.15,
+    "world_rule_consistency": 0.15,
+    "unit_arc": 0.15,
+    "prose_and_voice": 0.10,
+    "originality": 0.05
+  },
+  "author_route_alignment": {
+    "gold_function_alignment": 0.50,
+    "gold_event_overlap": 0.30,
+    "gold_end_state_alignment": 0.20
+  },
+  "reporting_rules": [
+    "Never merge independent_quality and author_route_alignment into one score.",
+    "A different route may be high quality even when gold event overlap is low.",
+    "The original target chapter participates as an anonymous candidate in quality judging.",
+    "If the original target does not satisfy the same public idea contract, keep it diagnostic-only; its hard-gate failure is a benchmark-spec mismatch, not a model win.",
+    "Judge forward and reversed candidate orders; inconsistent winner means judge_uncertain.",
+    "Human preference is the final evidence for whether generated text approaches or exceeds the original."
+  ]
+}

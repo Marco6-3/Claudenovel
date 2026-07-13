@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .pipeline import (
     commit_chapter,
+    generate_best_of_n,
     generate_draft,
     init_project,
     index_report,
@@ -40,6 +41,12 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--chapter", type=int, required=True)
     plan.add_argument("--title", required=True)
     plan.add_argument("--goal", required=True)
+    plan.add_argument("--idea", help="human/external idea source text; defaults to --goal")
+    plan.add_argument("--lock", action="append", default=[], help="immutable idea element")
+    plan.add_argument("--forbid-change", action="append", default=[])
+    plan.add_argument("--freedom", action="append", default=[])
+    plan.add_argument("--success", action="append", default=[])
+    plan.add_argument("--ending-mode", choices=["closed", "resonant", "open"], default="resonant")
     plan.add_argument("--payoff", action="append", required=True)
     plan.add_argument("--ending-hook", required=True)
     plan.add_argument("--forbid", action="append", default=[])
@@ -69,6 +76,18 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--chapter", type=int, required=True)
     generate.add_argument("--temperature", type=float, default=0.7)
     generate.add_argument("--max-tokens", type=int, default=2200)
+
+    generate_best = sub.add_parser(
+        "generate-best",
+        help="generate candidates in parallel, gate them, and use a judge to select the winner",
+    )
+    generate_best.add_argument("--chapter", type=int, required=True)
+    generate_best.add_argument("--candidates", type=int, default=3)
+    generate_best.add_argument("--candidate-mode", choices=["homogeneous", "diverse"], default="diverse")
+    generate_best.add_argument("--temperature", type=float, default=0.85)
+    generate_best.add_argument("--max-tokens", type=int, default=2200)
+    generate_best.add_argument("--judge-temperature", type=float, default=0.0)
+    generate_best.add_argument("--judge-max-tokens", type=int, default=1800)
 
     sub.add_parser("llm-smoke", help="test configured OpenAI-compatible LLM")
 
@@ -102,6 +121,12 @@ def main(argv: list[str] | None = None) -> int:
                 chapter_number=args.chapter,
                 title=args.title,
                 goal=args.goal,
+                external_idea=args.idea,
+                idea_locks=args.lock or None,
+                forbidden_changes=args.forbid_change or None,
+                freedom_budget=args.freedom or None,
+                success_criteria=args.success or None,
+                ending_mode=args.ending_mode,
                 required_payoffs=args.payoff,
                 ending_hook=args.ending_hook,
                 forbidden_beats=args.forbid,
@@ -120,6 +145,20 @@ def main(argv: list[str] | None = None) -> int:
                 chapter_number=args.chapter,
                 temperature=args.temperature,
                 max_tokens=args.max_tokens,
+            )
+        )
+        return 0
+    if args.command == "generate-best":
+        _print_json(
+            generate_best_of_n(
+                root,
+                chapter_number=args.chapter,
+                candidate_count=args.candidates,
+                candidate_mode=args.candidate_mode,
+                temperature=args.temperature,
+                max_tokens=args.max_tokens,
+                judge_temperature=args.judge_temperature,
+                judge_max_tokens=args.judge_max_tokens,
             )
         )
         return 0

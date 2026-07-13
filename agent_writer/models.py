@@ -35,6 +35,30 @@ class ReaderExpectationMap(StrictModel):
     taboo: list[str] = Field(default_factory=list)
 
 
+class IdeaContract(StrictModel):
+    source_kind: Literal["human", "external"] = "human"
+    source_text: str
+    idea_locks: list[str] = Field(default_factory=list)
+    forbidden_changes: list[str] = Field(default_factory=list)
+    freedom_budget: list[str] = Field(default_factory=list)
+    success_criteria: list[str] = Field(default_factory=list)
+
+    @field_validator("source_text")
+    @classmethod
+    def require_source_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("idea contract requires source_text")
+        return value.strip()
+
+    @field_validator("idea_locks")
+    @classmethod
+    def require_idea_lock(cls, value: list[str]) -> list[str]:
+        cleaned = [item.strip() for item in value if item.strip()]
+        if not cleaned:
+            raise ValueError("idea contract requires at least one idea lock")
+        return cleaned
+
+
 class CharacterConstraint(StrictModel):
     name: str
     current_stage: str = ""
@@ -50,20 +74,18 @@ class CharacterConstraints(StrictModel):
     characters: list[CharacterConstraint] = Field(default_factory=list)
 
 
-class ChapterContract(StrictModel):
+class UnitContract(StrictModel):
     chapter_number: int
     title: str
     target_length: str = "2500-4000"
-    previous_handoff: str = ""
+    idea_contract: IdeaContract
     main_goal: str
     required_payoffs: list[str] = Field(default_factory=list)
     forbidden_beats: list[str] = Field(default_factory=list)
     cool_point: str = ""
-    relation_delta: str = ""
-    foreshadowing_ops: list[str] = Field(default_factory=list)
+    ending_mode: Literal["closed", "resonant", "open"] = "resonant"
     ending_hook: str
     allowed_system_changes: list[str] = Field(default_factory=list)
-    allowed_sources: list[str] = Field(default_factory=list)
 
     @field_validator("required_payoffs")
     @classmethod
@@ -71,6 +93,11 @@ class ChapterContract(StrictModel):
         if not value:
             raise ValueError("chapter contract requires at least one payoff")
         return value
+
+
+# Transitional import alias. Persisted contracts and the default workflow are
+# single units; the old name remains import-compatible for callers.
+ChapterContract = UnitContract
 
 
 class PrewritePlan(StrictModel):
@@ -97,6 +124,9 @@ class ReviewResult(StrictModel):
     blocking: bool
     issues: list[ReviewIssue] = Field(default_factory=list)
     rewrite_instructions: list[str] = Field(default_factory=list)
+    draft_sha256: str = ""
+    contract_sha256: str = ""
+    constraints_sha256: str = ""
     reviewed_at: str = Field(default_factory=utc_now_iso)
 
 
@@ -107,4 +137,4 @@ class ChapterCommit(StrictModel):
     accepted_file: str
     review_file: str
     contract_file: str
-    state_updates: dict[str, object] = Field(default_factory=dict)
+    artifact_hashes: dict[str, str] = Field(default_factory=dict)

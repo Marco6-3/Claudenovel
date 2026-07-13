@@ -1,0 +1,48 @@
+{
+  "schema_version": "difu-early-private-gold/v1",
+  "warning": "Private benchmark data. Never expose this file or target chapter text to Writer agents.",
+  "cases": {
+    "after_chapter_01": {
+      "target_chapter": 2,
+      "target_title": "抢个红包",
+      "gold_functions": ["激活地府群核心超自然前提", "把红包转化为现实可验证物品", "让陈默从怀疑转向利用秘密", "引入室友与秦思妍校园线"],
+      "gold_events": ["抢到诅咒娃娃", "发现百宝囊", "娃娃从手机提取到现实", "王冬提到校花秦思妍"],
+      "gold_end_state": ["陈默确认群成员是真鬼", "陈默隐藏秘密并产生逆袭欲望", "校园女主线被重新接入"]
+    },
+    "after_chapter_04": {
+      "target_chapter": 5,
+      "target_title": "阿里呱呱",
+      "gold_functions": ["扩展地府群经济生态", "展示人间技术在抢红包中的优势", "建立冥币与商城规则", "给陈默一次有限属性收益"],
+      "gold_events": ["富鬼入群并发红包", "自动抢红包得到9.9冥币", "进入天鬼商城", "用全部冥币购买朱颜果"],
+      "gold_end_state": ["陈默理解地府货币与商城", "陈默取得朱颜果", "群聊秘密的可利用性进一步增强"]
+    },
+    "after_chapter_11": {
+      "target_chapter": 12,
+      "target_title": "鬼王符篆",
+      "gold_functions": ["兑现林萧拦截", "让地府资源第一次参与现实暴力冲突", "用喜剧拖延隐藏底牌", "把爽点转成更大失控风险"],
+      "gold_events": ["两名职业保镖出现", "陈默假装肚子疼进入厕所", "使用鬼王符篆", "大力鬼王附身并准备迎战"],
+      "gold_end_state": ["联系方式未删除", "陈默身体由鬼王暂时控制", "保镖冲突尚未完全收束"]
+    },
+    "after_chapter_16": {
+      "target_chapter": 17,
+      "target_title": "夜半惊魂",
+      "gold_functions": ["兑现鬼瞳鬼耳道具", "揭示宿舍长期异常的原因", "建立人与鬼可对话的新叙事接口", "用嘴贫缓冲恐怖"],
+      "gold_events": ["珠子碎裂并融入眉心", "陈默获得夜视与超常听力", "看见趴在王冬床上的男鬼", "男鬼自称袭飞并提到404宿舍别名"],
+      "gold_end_state": ["陈默可见可听鬼物", "袭飞成为明确对手或交涉对象", "猛鬼宿舍问题开启"]
+    },
+    "after_chapter_22": {
+      "target_chapter": 23,
+      "target_title": "地府土豪",
+      "gold_functions": ["扩展地府交易关系", "把偶得稀有物转成长期资源", "建立富鬼私人关系", "为后续购买驱鬼资源提供资本"],
+      "gold_events": ["富鬼主动加好友", "求购后羿箭", "陈默让买方报价", "以99999冥币成交并获赠礼物承诺"],
+      "gold_end_state": ["陈默拥有大额冥币", "后羿箭已转让", "富鬼成为可联系资源方"]
+    },
+    "after_chapter_26": {
+      "target_chapter": 27,
+      "target_title": "景秀盛世",
+      "gold_functions": ["兑现秦思妍求救", "让鬼瞳帮助陈默进入现场", "把校园关系线转成真实灵异危机", "以附身制造下一章钩子"],
+      "gold_events": ["秦思妍发送位置", "陈默赶到景秀盛世", "利用夜视攀入别墅", "黑影附身秦思妍"],
+      "gold_end_state": ["陈默确认求救与鬼物有关", "秦思妍被附身", "危机未解决并进入正面对抗"]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "single-unit-experiment/v1",
+  "objective": "提高外部创意驱动的单章与单元剧质量，不评估长期无人续写",
+  "primary_metric": "human_pairwise_preference_with_idea_fidelity_gate",
+  "conditions": [
+    {"id": "C0", "method": "direct", "candidates": 1, "judge_passes": 0},
+    {"id": "C1", "method": "homogeneous_best_of_n", "candidates": 3, "judge_passes": 2},
+    {"id": "C2", "method": "diverse_best_of_n", "candidates": 3, "judge_passes": 2},
+    {"id": "C3", "method": "character_simulation_rewrite", "candidates": 1, "judge_passes": 0},
+    {"id": "C4", "method": "critic_revise_c2_winner", "candidates": 1, "judge_passes": 2},
+    {"id": "C5", "method": "long_context_ablation", "candidates": 3, "judge_passes": 2, "product_candidate": false}
+  ],
+  "repetitions_per_task": 3,
+  "human_review_fraction": 0.2,
+  "minimum_order_consistency": 0.85,
+  "promotion_rules": {
+    "idea_drift_not_worse_than_C0": true,
+    "human_preference_improves": true,
+    "report_cost_and_latency": true
+  }
+}
