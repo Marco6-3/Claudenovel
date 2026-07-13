@@ -1,0 +1,52 @@
+{
+  "schema_version": "claudenovel-mini-experiment/v1",
+  "status": "judge_uncertain",
+  "official_winner": null,
+  "hard_gate_pass_rate": 1.0,
+  "judge_protocol": {
+    "forward_mapping": {
+      "A": "candidate_01",
+      "B": "candidate_02",
+      "C": "candidate_03"
+    },
+    "reverse_mapping": {
+      "A": "candidate_03",
+      "B": "candidate_02",
+      "C": "candidate_01"
+    },
+    "forward_winner": "candidate_01",
+    "reverse_winner": "candidate_03",
+    "order_consistent": false,
+    "observed_position_tendency": "both isolated judge passes selected the candidate presented as A"
+  },
+  "diagnostic_averages_not_for_selection": {
+    "candidate_01": {
+      "weighted_score": 9.5,
+      "idea_fidelity": 9.75,
+      "unit_arc": 9.45,
+      "character_causality": 9.45,
+      "scene_and_prose": 9.45,
+      "emotional_payoff": 9.5,
+      "originality": 9.0
+    },
+    "candidate_02": {
+      "weighted_score": 9.32,
+      "idea_fidelity": 9.65,
+      "unit_arc": 9.2,
+      "character_causality": 9.05,
+      "scene_and_prose": 9.15,
+      "emotional_payoff": 9.1,
+      "originality": 9.4
+    },
+    "candidate_03": {
+      "weighted_score": 9.41,
+      "idea_fidelity": 9.6,
+      "unit_arc": 9.4,
+      "character_causality": 9.2,
+      "scene_and_prose": 9.4,
+      "emotional_payoff": 9.3,
+      "originality": 9.3
+    }
+  },
+  "decision": "Do not auto-select. Request human preference between candidate_01 and candidate_03 or rerun with a stronger pairwise judge protocol."
+}

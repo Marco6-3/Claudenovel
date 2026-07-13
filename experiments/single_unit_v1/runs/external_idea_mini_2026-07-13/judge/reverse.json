@@ -1,0 +1,95 @@
+{
+  "order": [
+    "A",
+    "B",
+    "C"
+  ],
+  "candidates": [
+    {
+      "label": "A",
+      "hard_gate": {
+        "idea_locks_present": true,
+        "forbidden_changes_absent": true,
+        "local_arc_paid_off": true,
+        "no_meta_or_placeholders": true,
+        "passed": true
+      },
+      "scores": {
+        "idea_fidelity": 9.8,
+        "unit_arc": 9.6,
+        "character_causality": 9.3,
+        "scene_and_prose": 9.5,
+        "emotional_payoff": 9.4,
+        "originality": 9.5
+      },
+      "weighted_score": 9.57,
+      "evidence": {
+        "idea_fidelity": "开篇即是三兄妹把照相馆分成三份；贴有“何敬山”的最后一卷被用于遗照，冲洗、放大后显出父亲及讨薪留档，完整兑现三项锁定。",
+        "unit_arc": "争产从计算器、资产清单推进到共同完成十二格，结尾以“先把底片编完目录”、划掉“按废品处理”和把相机放回柜中形成实质但非终局的改变。",
+        "character_causality": "秋言托背景并管计时与账目，沈峤修机械机、拍摄和放大，知微找工具、移烛台并按编号开抽屉；各自行动共同促成照片和档案的发现。",
+        "scene_and_prose": "十二格逐次变化、烛影、显影盘浮像等过程具体可视；“影子一会儿叠住，一会儿分开”与末尾空胶卷盒构成克制的意象回环。",
+        "emotional_payoff": "理解变化落实为笔尖划破资产清单、旧价开收据和把德国相机放回去；住院费、房租和卖店分歧仍在，避免强行团圆。",
+        "originality": "把遗照中的旧照片二次放大，再借反光发现抽屉，以离厂工人的讨薪影像档案解释照相馆的来历与存续价值，组合新鲜且服务主题。"
+      },
+      "blocking_issues": []
+    },
+    {
+      "label": "B",
+      "hard_gate": {
+        "idea_locks_present": true,
+        "forbidden_changes_absent": true,
+        "local_arc_paid_off": true,
+        "no_meta_or_placeholders": true,
+        "passed": true
+      },
+      "scores": {
+        "idea_fidelity": 9.6,
+        "unit_arc": 9.3,
+        "character_causality": 8.9,
+        "scene_and_prose": 9.2,
+        "emotional_payoff": 9.1,
+        "originality": 9.4
+      },
+      "weighted_score": 9.31,
+      "evidence": {
+        "idea_fidelity": "三人的手同时压住买卖意向书，冷柜最后一卷依父亲预约给吴姓老人拍遗照；冲出的三格叠影揭示照相馆是公益影像代收点及父亲留店的安排。",
+        "unit_arc": "从“今天必须定”到三人轮拍、共同冲洗，最终收起但不撕意向书并约定七天清点，争执因拍摄获得明确的阶段性转向。",
+        "character_causality": "程萤拆开原想珍藏的胶卷，程默用机械相机并折出售牌补光，程岚按掉买家电话并参与曝光与冲洗；这些选择让最后一单和后续发现成立。",
+        "scene_and_prose": "左右颠倒的取景器、天光迅速消失、出售牌改作反光板等细节让停电拍摄有现场压力，末尾断脚朝上的牌子完成有效收束。",
+        "emotional_payoff": "程萤牺牲“遗物”后理解胶卷并非供起来，程岚只给七天而非宣布守店，程默承认无力买份额，情绪落点诚实；但父亲预置叠影承担了较多解释功能。",
+        "originality": "以照相馆作为多年未送达信件的代收地址，并用胶片二次曝光把当下遗照与父亲的登记簿叠合，构思鲜明，虽略显精密设计。"
+      },
+      "blocking_issues": []
+    },
+    {
+      "label": "C",
+      "hard_gate": {
+        "idea_locks_present": true,
+        "forbidden_changes_absent": true,
+        "local_arc_paid_off": true,
+        "no_meta_or_placeholders": true,
+        "passed": true
+      },
+      "scores": {
+        "idea_fidelity": 9.7,
+        "unit_arc": 9.5,
+        "character_causality": 9.4,
+        "scene_and_prose": 9.6,
+        "emotional_payoff": 9.6,
+        "originality": 9.2
+      },
+      "weighted_score": 9.54,
+      "evidence": {
+        "idea_fidelity": "三兄妹分别争卖店、机器和保留底片；父亲装入相机的最后一卷剩余格被用于陌生老人魏守成的遗照，冲洗出的前七格改变了他们对留店原因的判断。",
+        "unit_arc": "中介带来的次日签约压力贯穿全篇，拍摄与冲洗后转化为三人签名的九十天方案；债务、产权和九十天后的决定仍未消失。",
+        "character_causality": "林川从拒拍到调整侧光，护士林岚用纱布承托伤手，社工林芍引导老人面向门牌；共同拍摄改善肖像，显影后又由三人据证据制定限期安排。",
+        "scene_and_prose": "半落卷帘门、逐格计数、侧光中的伤手、显影盘里依次浮出的父亲背影都具象清楚，结尾水珠拉长三道人影的画面含蓄有力。",
+        "emotional_payoff": "照片让“老糊涂”的旧判断翻转为固定地址对临终者的意义；“这不是和解”及三人各自加注条件，把感动压在现实债务之下。",
+        "originality": "安宁病房临终肖像志愿点与不可轻易更换的街道地址紧密扣合遗照主题；设定动人，但父亲预拍说明照片、再由老人补足解释的揭示路径相对常规。"
+      },
+      "blocking_issues": []
+    }
+  ],
+  "winner_label": "A",
+  "winner_reason": "A以最直接的照片因果完成核心创意：当晚遗照既放大出父亲与讨薪往事，又通过反光指向仍在店内的档案，发现随即改变资产清单和三兄妹的下一步行动。它在原创性、线索回收和现实未解压力之间最均衡，略胜情绪完成度很高但揭示较依赖说明性旧片与老人讲述的C。"
+}

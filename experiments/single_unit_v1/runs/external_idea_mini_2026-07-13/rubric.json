@@ -1,0 +1,21 @@
+{
+  "hard_gate": [
+    "idea_locks_present",
+    "forbidden_changes_absent",
+    "local_arc_paid_off",
+    "no_meta_or_placeholders"
+  ],
+  "dimensions": {
+    "idea_fidelity": 0.30,
+    "unit_arc": 0.20,
+    "character_causality": 0.15,
+    "scene_and_prose": 0.15,
+    "emotional_payoff": 0.10,
+    "originality": 0.10
+  },
+  "judge_protocol": {
+    "blind_strategy": true,
+    "forward_and_reversed_order": true,
+    "require_consistent_winner": true
+  }
+}
