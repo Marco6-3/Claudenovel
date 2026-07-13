@@ -1,0 +1,69 @@
+{
+  "case_id": "after_chapter_16",
+  "status": "selected",
+  "official_winner": "original",
+  "order_consistent": true,
+  "pass_winners": {
+    "forward": "original",
+    "reverse": "original"
+  },
+  "ineligible_sources": [],
+  "diagnostic_averages": {
+    "candidate_01": {
+      "scores": {
+        "gold_function_alignment": 9.6,
+        "gold_event_overlap": 4.85,
+        "gold_end_state_alignment": 9.1
+      },
+      "weighted_score": 8.075,
+      "pass_weighted_scores": [
+        8.16,
+        7.99
+      ],
+      "hard_gate_passed": true,
+      "comparison_eligible": true
+    },
+    "candidate_02": {
+      "scores": {
+        "gold_function_alignment": 9.6,
+        "gold_event_overlap": 4.9,
+        "gold_end_state_alignment": 9.1
+      },
+      "weighted_score": 8.09,
+      "pass_weighted_scores": [
+        8.19,
+        7.99
+      ],
+      "hard_gate_passed": true,
+      "comparison_eligible": true
+    },
+    "candidate_03": {
+      "scores": {
+        "gold_function_alignment": 9.6,
+        "gold_event_overlap": 4.85,
+        "gold_end_state_alignment": 9.1
+      },
+      "weighted_score": 8.075,
+      "pass_weighted_scores": [
+        8.13,
+        8.02
+      ],
+      "hard_gate_passed": true,
+      "comparison_eligible": true
+    },
+    "original": {
+      "scores": {
+        "gold_function_alignment": 10.0,
+        "gold_event_overlap": 10.0,
+        "gold_end_state_alignment": 10.0
+      },
+      "weighted_score": 10.0,
+      "pass_weighted_scores": [
+        10.0,
+        10.0
+      ],
+      "hard_gate_passed": true,
+      "comparison_eligible": true
+    }
+  }
+}

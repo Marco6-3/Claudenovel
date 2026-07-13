@@ -1,0 +1,17 @@
+{
+  "case_id": "after_chapter_11",
+  "passes": {
+    "forward": {
+      "A": "candidate_01",
+      "B": "candidate_02",
+      "C": "candidate_03",
+      "D": "original"
+    },
+    "reverse": {
+      "A": "original",
+      "B": "candidate_03",
+      "C": "candidate_02",
+      "D": "candidate_01"
+    }
+  }
+}

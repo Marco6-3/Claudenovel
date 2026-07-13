@@ -1,0 +1,201 @@
+{
+  "experiment": "retrospective architecture probes on two leakage-controlled writing cases",
+  "limitations": [
+    "Only two cut points and one writer model family are available.",
+    "Character n-grams measure surface diversity, not semantic plot diversity.",
+    "The oracle fusion bound assumes impossible per-dimension cherry-picking and is only an upper-bound diagnostic."
+  ],
+  "cases": {
+    "after_chapter_11": {
+      "quality_best": "candidate_02",
+      "quality_scores": {
+        "candidate_01": 9.062,
+        "candidate_02": 9.19,
+        "candidate_03": 8.58
+      },
+      "route_scores": {
+        "candidate_01": 6.18,
+        "candidate_02": 6.16,
+        "candidate_03": 5.995
+      },
+      "pairwise_text_diversity": [
+        {
+          "pair": [
+            "candidate_01",
+            "candidate_02"
+          ],
+          "char_4gram_cosine": 0.0389,
+          "char_4gram_jaccard": 0.018,
+          "manual_macro_event_jaccard": 0.8462
+        },
+        {
+          "pair": [
+            "candidate_01",
+            "candidate_03"
+          ],
+          "char_4gram_cosine": 0.0264,
+          "char_4gram_jaccard": 0.013,
+          "manual_macro_event_jaccard": 0.6667
+        },
+        {
+          "pair": [
+            "candidate_02",
+            "candidate_03"
+          ],
+          "char_4gram_cosine": 0.0379,
+          "char_4gram_jaccard": 0.0179,
+          "manual_macro_event_jaccard": 0.6667
+        }
+      ],
+      "mean_pairwise_4gram_cosine": 0.0344,
+      "mean_manual_macro_event_jaccard": 0.7265,
+      "heuristic_effective_macro_channels": 1.223,
+      "judge_score_pearson_forward_reverse": 0.9925,
+      "judge_same_source_score_mae": 0.1217,
+      "stage_one_two_writer_winners": {
+        "forward": "candidate_02",
+        "reverse": "candidate_02"
+      },
+      "stage_one_consistent": true,
+      "adaptive_generated_candidates": 2,
+      "third_writer_changed_best_average": false,
+      "oracle_dimension_fusion_bound": 9.2175,
+      "best_single_score": 9.19,
+      "maximum_fusion_headroom": 0.0275,
+      "dimension_leaders": {
+        "context_continuity": [
+          "candidate_02"
+        ],
+        "causal_progression": [
+          "candidate_02"
+        ],
+        "character_consistency": [
+          "candidate_02"
+        ],
+        "world_rule_consistency": [
+          "candidate_01"
+        ],
+        "unit_arc": [
+          "candidate_02"
+        ],
+        "prose_and_voice": [
+          "candidate_02"
+        ],
+        "originality": [
+          "candidate_03"
+        ]
+      },
+      "rubric_sensitivity_winners": {
+        "declared_weights": "candidate_02",
+        "equal_weights": "candidate_02",
+        "without_context_continuity": "candidate_02",
+        "without_causal_progression": "candidate_02",
+        "without_character_consistency": "candidate_02",
+        "without_world_rule_consistency": "candidate_02",
+        "without_unit_arc": "candidate_02",
+        "without_prose_and_voice": "candidate_02",
+        "without_originality": "candidate_02"
+      }
+    },
+    "after_chapter_16": {
+      "quality_best": "candidate_02",
+      "quality_scores": {
+        "candidate_01": 9.248,
+        "candidate_02": 9.332,
+        "candidate_03": 9.013
+      },
+      "route_scores": {
+        "candidate_01": 8.075,
+        "candidate_02": 8.09,
+        "candidate_03": 8.075
+      },
+      "pairwise_text_diversity": [
+        {
+          "pair": [
+            "candidate_01",
+            "candidate_02"
+          ],
+          "char_4gram_cosine": 0.0208,
+          "char_4gram_jaccard": 0.0097,
+          "manual_macro_event_jaccard": 0.8333
+        },
+        {
+          "pair": [
+            "candidate_01",
+            "candidate_03"
+          ],
+          "char_4gram_cosine": 0.025,
+          "char_4gram_jaccard": 0.0118,
+          "manual_macro_event_jaccard": 0.8333
+        },
+        {
+          "pair": [
+            "candidate_02",
+            "candidate_03"
+          ],
+          "char_4gram_cosine": 0.0258,
+          "char_4gram_jaccard": 0.0104,
+          "manual_macro_event_jaccard": 0.8333
+        }
+      ],
+      "mean_pairwise_4gram_cosine": 0.0239,
+      "mean_manual_macro_event_jaccard": 0.8333,
+      "heuristic_effective_macro_channels": 1.125,
+      "judge_score_pearson_forward_reverse": 0.6838,
+      "judge_same_source_score_mae": 0.115,
+      "stage_one_two_writer_winners": {
+        "forward": "candidate_01",
+        "reverse": "candidate_02"
+      },
+      "stage_one_consistent": false,
+      "adaptive_generated_candidates": 3,
+      "third_writer_changed_best_average": false,
+      "oracle_dimension_fusion_bound": 9.34,
+      "best_single_score": 9.332,
+      "maximum_fusion_headroom": 0.008,
+      "dimension_leaders": {
+        "context_continuity": [
+          "candidate_01",
+          "candidate_02"
+        ],
+        "causal_progression": [
+          "candidate_02"
+        ],
+        "character_consistency": [
+          "candidate_02"
+        ],
+        "world_rule_consistency": [
+          "candidate_01",
+          "candidate_02"
+        ],
+        "unit_arc": [
+          "candidate_02"
+        ],
+        "prose_and_voice": [
+          "candidate_02"
+        ],
+        "originality": [
+          "candidate_03"
+        ]
+      },
+      "rubric_sensitivity_winners": {
+        "declared_weights": "candidate_02",
+        "equal_weights": "candidate_02",
+        "without_context_continuity": "candidate_02",
+        "without_causal_progression": "candidate_02",
+        "without_character_consistency": "candidate_02",
+        "without_world_rule_consistency": "candidate_02",
+        "without_unit_arc": "candidate_02",
+        "without_prose_and_voice": "candidate_02",
+        "without_originality": "candidate_02"
+      }
+    }
+  },
+  "cross_case": {
+    "always_three_generated_candidates": 6,
+    "adaptive_two_then_escalate_generated_candidates": 5,
+    "pilot_candidate_generation_reduction": 0.1667,
+    "cases_where_third_writer_changed_best_average": 0,
+    "mean_maximum_fusion_headroom": 0.0178
+  }
+}

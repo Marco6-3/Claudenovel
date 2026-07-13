@@ -1,0 +1,28 @@
+{
+  "schema_version": "difu-early-pilot-run/v1",
+  "created_at": "2026-07-13",
+  "cases": [
+    {
+      "case_id": "after_chapter_11",
+      "prompt": "after_chapter_11/public/writer_prompt.md",
+      "contract": "after_chapter_11/public/idea_contract.json",
+      "quality_result": "after_chapter_11/quality_result.json",
+      "route_result": "after_chapter_11/route_result.json",
+      "judge_dir": "judge/after_chapter_11"
+    },
+    {
+      "case_id": "after_chapter_16",
+      "prompt": "after_chapter_16/public/writer_prompt.md",
+      "contract": "after_chapter_16/public/idea_contract.json",
+      "quality_result": "after_chapter_16/quality_result.json",
+      "route_result": "after_chapter_16/route_result.json",
+      "judge_dir": "judge/after_chapter_16"
+    }
+  ],
+  "private_gold_policy": "Regenerate private gold from the committed source novel with build_benchmark.py; it is intentionally not duplicated in this run bundle.",
+  "excluded_runtime_files": [
+    "blind prompt copies",
+    "temporary work directories",
+    "provider credentials"
+  ]
+}

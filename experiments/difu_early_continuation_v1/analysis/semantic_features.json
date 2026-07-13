@@ -1,0 +1,39 @@
+{
+  "annotation_method": "Exploratory manual event-tag annotation after generation; not a blinded human study.",
+  "cases": {
+    "after_chapter_11": {
+      "candidate_01": [
+        "two_hired_guards", "coercive_delete_contact", "protagonist_is_hit", "random_new_hell_resource",
+        "limited_supernatural_control", "environmental_escape", "phone_recording_leverage", "public_witnesses",
+        "antagonist_retreats", "retaliation_hook", "toilet_setting", "blindness_resource"
+      ],
+      "candidate_02": [
+        "two_hired_guards", "coercive_delete_contact", "protagonist_is_hit", "random_new_hell_resource",
+        "limited_supernatural_control", "environmental_escape", "phone_recording_leverage", "public_witnesses",
+        "antagonist_retreats", "retaliation_hook", "toilet_setting", "cold_wind_resource"
+      ],
+      "candidate_03": [
+        "two_hired_guards", "coercive_delete_contact", "protagonist_is_hit", "random_new_hell_resource",
+        "limited_supernatural_control", "environmental_escape", "phone_recording_leverage", "public_witnesses",
+        "antagonist_retreats", "retaliation_hook", "stairwell_setting", "misfortune_resource", "fire_alarm"
+      ]
+    },
+    "after_chapter_16": {
+      "candidate_01": [
+        "fallen_beads_activate", "vision_hearing_awaken", "dead_former_male_resident", "humorous_denial",
+        "longstanding_dorm_marks", "night_roll_call_entity", "roommate_targeted", "attendance_rule_exploit",
+        "threat_delayed", "ghost_negotiation", "nonexistent_building"
+      ],
+      "candidate_02": [
+        "fallen_beads_activate", "vision_hearing_awaken", "dead_former_male_resident", "humorous_denial",
+        "longstanding_dorm_marks", "night_roll_call_entity", "roommate_targeted", "attendance_rule_exploit",
+        "threat_delayed", "ghost_negotiation", "name_substitution"
+      ],
+      "candidate_03": [
+        "fallen_beads_activate", "vision_hearing_awaken", "dead_former_male_resident", "humorous_denial",
+        "longstanding_dorm_marks", "night_roll_call_entity", "roommate_targeted", "attendance_rule_exploit",
+        "threat_delayed", "ghost_negotiation", "occupancy_count_trick"
+      ]
+    }
+  }
+}

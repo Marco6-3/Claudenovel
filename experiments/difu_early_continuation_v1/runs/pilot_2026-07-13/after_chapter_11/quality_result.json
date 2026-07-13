@@ -1,0 +1,87 @@
+{
+  "case_id": "after_chapter_11",
+  "status": "selected",
+  "official_winner": "candidate_02",
+  "order_consistent": true,
+  "pass_winners": {
+    "forward": "candidate_02",
+    "reverse": "candidate_02"
+  },
+  "ineligible_sources": [
+    "original"
+  ],
+  "diagnostic_averages": {
+    "candidate_01": {
+      "scores": {
+        "context_continuity": 9.3,
+        "causal_progression": 9.1,
+        "character_consistency": 8.95,
+        "world_rule_consistency": 9.15,
+        "unit_arc": 9.2,
+        "prose_and_voice": 8.8,
+        "originality": 8.15
+      },
+      "weighted_score": 9.062,
+      "pass_weighted_scores": [
+        9.11,
+        9.015
+      ],
+      "hard_gate_passed": true,
+      "comparison_eligible": true
+    },
+    "candidate_02": {
+      "scores": {
+        "context_continuity": 9.35,
+        "causal_progression": 9.25,
+        "character_consistency": 9.3,
+        "world_rule_consistency": 9.05,
+        "unit_arc": 9.4,
+        "prose_and_voice": 8.9,
+        "originality": 8.35
+      },
+      "weighted_score": 9.19,
+      "pass_weighted_scores": [
+        9.285,
+        9.095
+      ],
+      "hard_gate_passed": true,
+      "comparison_eligible": true
+    },
+    "candidate_03": {
+      "scores": {
+        "context_continuity": 9.05,
+        "causal_progression": 8.4,
+        "character_consistency": 8.75,
+        "world_rule_consistency": 7.7,
+        "unit_arc": 8.85,
+        "prose_and_voice": 8.65,
+        "originality": 8.6
+      },
+      "weighted_score": 8.58,
+      "pass_weighted_scores": [
+        8.62,
+        8.54
+      ],
+      "hard_gate_passed": true,
+      "comparison_eligible": true
+    },
+    "original": {
+      "scores": {
+        "context_continuity": 8.45,
+        "causal_progression": 6.15,
+        "character_consistency": 7.35,
+        "world_rule_consistency": 4.65,
+        "unit_arc": 2.25,
+        "prose_and_voice": 6.75,
+        "originality": 6.25
+      },
+      "weighted_score": 6.045,
+      "pass_weighted_scores": [
+        5.93,
+        6.16
+      ],
+      "hard_gate_passed": false,
+      "comparison_eligible": false
+    }
+  }
+}

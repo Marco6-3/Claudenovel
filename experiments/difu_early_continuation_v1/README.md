@@ -32,3 +32,15 @@ python -X utf8 experiments/difu_early_continuation_v1/build_benchmark.py \
 ## 首轮实验建议
 
 先运行 `after_chapter_11` 与 `after_chapter_16`：前者测试既有资源参与现实冲突，后者测试新能力首次兑现。每个切点运行 C0 单稿、C1 同质三稿、C2 差异化三稿；确认隔离与评分可靠后，再扩到全部六个切点。
+
+## 已归档试运行
+
+`runs/pilot_2026-07-13/` 保存第 11、16 章后两个断点的公开合同、Writer 实际提示词、三篇候选、匿名映射、正反序 Judge 原始 JSON、聚合结果和完整报告。目标原章没有在 run bundle 中重复保存；需要时用仓库中的小说源文件和 `build_benchmark.py --include-private-gold-text` 重新生成 private 区。
+
+复现离线架构探针：
+
+```bash
+python -X utf8 experiments/difu_early_continuation_v1/analysis/analyze_pilot.py
+```
+
+期望结果保存在 `analysis/pilot_analysis_result.json`；`analysis/semantic_features.json` 是报告明确标注为探索性的人工宏观事件标签，不是盲标真值。
