@@ -40,4 +40,4 @@ python -X utf8 experiments/branch_first_v1/validate_branch_cards.py \
   --case after_chapter_16
 ```
 
-两个切点的聚合结果已经随 run bundle 保存。下一轮应沿用同一目录契约，继续 `after_chapter_1`、`after_chapter_4`、`after_chapter_22` 和 `after_chapter_26`，并先加入六轴事件指纹门和“先独评、后比较”的 Judge 协议。
+两个切点的聚合结果已经随 run bundle 保存。下一轮应沿用同一目录契约，继续 `after_chapter_01`、`after_chapter_04`、`after_chapter_22` 和 `after_chapter_26`，并先加入六轴事件指纹门和“先独评、后比较”的 Judge 协议。

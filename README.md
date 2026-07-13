@@ -99,7 +99,7 @@ Judge 未单独配置 endpoint 或 key 时复用 Writer 配置。`generate-best`
 - C4：C2 胜出稿经过一次限定批评与返修。
 - C5：只作为长上下文反证，不进入产品流程。
 
-实验任务、评分树和晋级规则位于 `experiments/single_unit_v1/`；研究依据见 `docs/research/single-unit-writing-experiments.md`。
+实验任务、评分树和晋级规则位于 `experiments/single_unit_v1/`；研究依据见 `docs/research/single-unit-writing-experiments.md`。完整历史 run、证据链以及下一次 clone 后的继续顺序见 `experiments/README.md`。
 
 ## 只读分析与单章改写
 
@@ -115,7 +115,7 @@ Judge 未单独配置 endpoint 或 key 时复用 Writer 配置。`generate-best`
 ## 项目结构
 
 - `agent_writer/`：外部创意优先的单元写作、硬闸、双顺序 Judge 和人工提交。
-- `experiments/single_unit_v1/`：任务集、条件配置与评分树。
+- `experiments/`：实验顺序索引、任务集、可执行工具与不可变历史 run。
 - `docs/adr/`：领域与架构决策。
 - `docs/research/`：论文依据与实验方案。
 - `novel_parser/`：只读解析、证据检索和单章诊断底座。
