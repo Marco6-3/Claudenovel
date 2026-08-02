@@ -1,0 +1,25 @@
+{
+  "chapter_number": 2,
+  "characters": [
+    {
+      "name": "凌默",
+      "current_stage": "以当前单元合同和人类输入为准",
+      "motivation": "服务当前单元目标，但不得覆盖创意锁。",
+      "allowed_actions": [
+        "围绕本章目标作出有限、可解释的行动"
+      ],
+      "forbidden_actions": [
+        "突然表白",
+        "主动依附",
+        "无证据无条件信任"
+      ],
+      "voice_rules": [
+        "保留既有称呼、句长和情绪外露程度"
+      ],
+      "ooc_red_lines": [
+        "突然表白",
+        "无证据无条件信任"
+      ]
+    }
+  ]
+}

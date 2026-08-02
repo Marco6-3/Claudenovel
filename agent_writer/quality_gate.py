@@ -14,6 +14,11 @@ COERCION_PATTERNS = [
     )
 ]
 
+ROMANCE_CONTEXT = re.compile(
+    r"(加我|追求|表白|告白|喜欢|爱上|恋爱|约会|情侣|男朋友|女朋友|"
+    r"亲密关系|感情|牵手|拥抱|接吻|分手|复合|结婚|婚约)"
+)
+
 UNAUTHORIZED_SYSTEM_PATTERNS = [
     re.compile(pattern)
     for pattern in (
@@ -42,6 +47,22 @@ def _first_match(text: str, patterns: list[re.Pattern[str]]) -> str:
     return ""
 
 
+def _first_contextual_match(
+    text: str,
+    patterns: list[re.Pattern[str]],
+    context: re.Pattern[str],
+    *,
+    radius: int = 80,
+) -> str:
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            start = max(0, match.start() - radius)
+            end = min(len(text), match.end() + radius)
+            if context.search(text[start:end]):
+                return match.group(0)
+    return ""
+
+
 def _contains(text: str, needle: str) -> bool:
     cleaned = needle.strip()
     if not cleaned:
@@ -54,7 +75,8 @@ def _contains(text: str, needle: str) -> bool:
 
 
 def _normalize_zh(value: str) -> str:
-    return re.sub(r"[，。！？、；：“”‘’《》（）\s了]", "", value)
+    normalized = value.replace("反常", "异常")
+    return re.sub(r"[，。！？、；：“”‘’《》（）\s了的]", "", normalized)
 
 
 def _semantic_contains(text: str, needle: str) -> bool:
@@ -125,7 +147,7 @@ def evaluate_draft(
                 )
             )
 
-    coercion = _first_match(draft_text, COERCION_PATTERNS)
+    coercion = _first_contextual_match(draft_text, COERCION_PATTERNS, ROMANCE_CONTEXT)
     if coercion:
         issues.append(
             ReviewIssue(

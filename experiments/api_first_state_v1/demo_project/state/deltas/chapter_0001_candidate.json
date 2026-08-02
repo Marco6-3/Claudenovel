@@ -1,0 +1,119 @@
+{
+  "schema_version": "state-delta/v1",
+  "delta_id": "chapter_0001-0b8b739f2cea064b",
+  "chapter_number": 1,
+  "accepted_sha256": "0b8b739f2cea064bb92ec77d0cfb3266f60b5d319df7232de16d7365adcfc9a9",
+  "source": "model",
+  "model": "deepseek-v4-flash",
+  "additions": [
+    {
+      "layer": "entity_states",
+      "record": {
+        "state_id": "entity.lingmo.inherited_heat_state",
+        "subject": "凌默",
+        "claim": "凌默体内有传承留下的热流在经脉中乱窜，且左手出现灼痛发作",
+        "value": "凌晨四点以后左手灼痛才慢慢退成麻木；传承留下的热流仍在经脉里乱窜；他不敢继续引气；每次发作时间记在数学错题本最后一页",
+        "authority": "text_confirmed",
+        "status": "active",
+        "confidence": 1.0,
+        "evidence_refs": [
+          {
+            "evidence_id": "novel-5b4f5b9dd99f:CH0001-P001",
+            "chapter_number": 1,
+            "paragraph_index": 1,
+            "paragraph_sha256": "a73e3f57489ce049d813543d6fef23413e33a725929f3b81fe1e97767db1e272",
+            "quote": "凌晨四点以后，凌默左手的灼痛才慢慢退成麻木。传承留下的热流仍在经脉里乱窜，他不敢继续引气，只把每次发作的时间记在数学错题本最后一页。"
+          }
+        ],
+        "introduced_chapter": 1,
+        "updated_chapter": 1,
+        "tags": [
+          "inheritance",
+          "body_change",
+          "left_hand",
+          "meridians",
+          "episode_log"
+        ],
+        "author_note": "",
+        "supersedes": []
+      }
+    },
+    {
+      "layer": "entity_states",
+      "record": {
+        "state_id": "entity.lingmo.left_hand_bandaged",
+        "subject": "凌默",
+        "claim": "凌默左手用纱布包扎，带着伤到校",
+        "value": "六点四十五分用纱布包扎左手；七点整带着伤走进教室",
+        "authority": "text_confirmed",
+        "status": "active",
+        "confidence": 1.0,
+        "evidence_refs": [
+          {
+            "evidence_id": "novel-5b4f5b9dd99f:CH0001-P002",
+            "chapter_number": 1,
+            "paragraph_index": 2,
+            "paragraph_sha256": "9e2b3b0b099162749aded1be443ee22f14198dfaaa2dacecff76565394b48af3",
+            "quote": "六点四十五分，他用纱布包扎左手，套上校服。"
+          },
+          {
+            "evidence_id": "novel-5b4f5b9dd99f:CH0001-P003",
+            "chapter_number": 1,
+            "paragraph_index": 3,
+            "paragraph_sha256": "4f966437b5e410c0d0df67e4025b34220b4b111645304207ec13e5568e357116",
+            "quote": "七点整，他带着伤走进教室。"
+          }
+        ],
+        "introduced_chapter": 1,
+        "updated_chapter": 1,
+        "tags": [
+          "left_hand",
+          "bandage",
+          "injury",
+          "school"
+        ],
+        "author_note": "",
+        "supersedes": []
+      }
+    },
+    {
+      "layer": "open_threads",
+      "record": {
+        "state_id": "open.lingmo.explain_bandage",
+        "subject": "凌默",
+        "claim": "凌默尚未想好如何向同桌和班主任解释手上的纱布",
+        "value": "他必须先想好怎样向同桌和班主任解释手上的纱布",
+        "authority": "text_confirmed",
+        "status": "active",
+        "confidence": 1.0,
+        "evidence_refs": [
+          {
+            "evidence_id": "novel-5b4f5b9dd99f:CH0001-P003",
+            "chapter_number": 1,
+            "paragraph_index": 3,
+            "paragraph_sha256": "4f966437b5e410c0d0df67e4025b34220b4b111645304207ec13e5568e357116",
+            "quote": "第一节是语文早读，上午还有两节数学连堂，他必须先想好怎样向同桌和班主任解释手上的纱布。"
+          }
+        ],
+        "introduced_chapter": 1,
+        "updated_chapter": 1,
+        "tags": [
+          "school",
+          "explanation",
+          "deskmate",
+          "homeroom_teacher"
+        ],
+        "author_note": "",
+        "supersedes": []
+      }
+    }
+  ],
+  "replacements": [],
+  "resolutions": [],
+  "change_summary": [
+    "确认凌默体内传承热流、左手灼痛发作及不敢继续引气的状态。",
+    "确认凌默左手已用纱布包扎并带伤到校。",
+    "登记凌默需向同桌和班主任解释手上纱布的未决事件。"
+  ],
+  "extracted_at": "2026-08-02T07:44:46+00:00"
+}

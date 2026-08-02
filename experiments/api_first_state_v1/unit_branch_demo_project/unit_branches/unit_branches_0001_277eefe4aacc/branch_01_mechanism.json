@@ -1,0 +1,114 @@
+{
+  "schema_version": "unit-branch-card/v1",
+  "branch_id": "branch_01_mechanism",
+  "planning_profile": "mechanism",
+  "unit_title": "图书馆频率与异常日志",
+  "approach_summary": "凌默在高三学业压力下，通过建立异常日志和控制变量方法，记录身体变化与图书馆接触频率的关联，确认因果线索，同时付出现实代价。",
+  "distinctive_choice": "将图书馆关联的确认建立在可回看的借阅记录和自建日志的交叉验证上，而非依赖主观感受或超自然直觉。",
+  "fingerprint": {
+    "conflict_space": "高三教室、图书馆、家庭书桌",
+    "trigger": "凌默发现左手热流频率与去图书馆次数存在同步波动，但缺乏系统记录",
+    "core_mechanism": "控制变量法：固定睡眠、学习时长，仅改变图书馆访问频率，记录身体症状",
+    "climax_action": "凌默调取图书馆借阅记录，与自己的异常日志逐日比对，发现热流峰值与借阅日期高度重合",
+    "cost_type": "睡眠债加剧、课堂注意力下降、同学关系紧张",
+    "end_hook": "确认关联后，凌默发现日志中某次未去图书馆却出现热流的日期，对应他曾在图书馆门口停留片刻——暗示接触时长可能比访问次数更关键"
+  },
+  "beats": [
+    {
+      "chapter_number": 1,
+      "title": "异常日志的开端",
+      "goal": "凌默建立初步的异常日志，记录症状频率与日常活动，并开始怀疑图书馆关联",
+      "required_payoffs": [
+        "建立异常日志"
+      ],
+      "acceptance_criteria": [
+        "正文中出现凌默用笔记本或手机记录症状的具体场景",
+        "日志包含日期、症状强度、睡眠时长、去图书馆与否等字段",
+        "凌默在内心独白中明确表达控制变量的初步想法"
+      ],
+      "ending_hook": "凌默发现连续三天去图书馆后，左手热流频率明显上升，但睡眠时间并未减少，排除睡眠不足因素",
+      "focus_entities": [
+        "凌默"
+      ],
+      "relevant_threads": [
+        "author.project_premise"
+      ],
+      "must_preserve": [
+        "凌默处于高三学习阶段",
+        "异常清醒、左手热流、睡眠问题持续存在"
+      ],
+      "risk_checks": [
+        "避免恐怖意象，聚焦身体变化与学习生活",
+        "确保时间连续性，承接上一章状态"
+      ],
+      "target_chars": 3000,
+      "accepted_chars": 0,
+      "status": "planned"
+    },
+    {
+      "chapter_number": 2,
+      "title": "控制变量的代价",
+      "goal": "凌默设计并执行控制变量实验，同时承受现实代价",
+      "required_payoffs": [
+        "确认图书馆关联"
+      ],
+      "acceptance_criteria": [
+        "凌默设定一周内固定睡眠和学习时间，仅改变图书馆访问次数",
+        "正文明确记录实验条件，如周一、三、五去图书馆，周二、四不去",
+        "出现现实代价：因记录日志导致课堂分心，被老师点名；同学询问他最近为何魂不守舍"
+      ],
+      "ending_hook": "初步数据显示热流与图书馆访问日高度相关，但凌默因睡眠不足在数学课上打瞌睡，被班主任警告",
+      "focus_entities": [
+        "凌默"
+      ],
+      "relevant_threads": [
+        "author.project_premise"
+      ],
+      "must_preserve": [
+        "图书馆关联必须由可回看行为和记录建立",
+        "现实学习或人际关系为调查付出明确代价"
+      ],
+      "risk_checks": [
+        "避免将图书馆写成恐怖副本",
+        "确保代价具体且符合高三现实"
+      ],
+      "target_chars": 4000,
+      "accepted_chars": 0,
+      "status": "planned"
+    },
+    {
+      "chapter_number": 3,
+      "title": "借阅记录的对证",
+      "goal": "凌默调取图书馆借阅记录，与异常日志交叉验证，确认因果联系",
+      "required_payoffs": [
+        "确认图书馆关联",
+        "现实代价升级"
+      ],
+      "acceptance_criteria": [
+        "凌默通过图书馆管理系统或纸质记录获取自己近一个月的借阅日期",
+        "正文展示借阅日期与日志中热流高峰的对比，至少两条重合证据",
+        "代价升级：因频繁查阅记录，错过一次小组讨论，导致与同学关系紧张"
+      ],
+      "ending_hook": "确认关联后，凌默发现一个例外日期：他未借书但热流出现，回忆当天曾在图书馆门口等人——暗示接触时长可能比次数更关键",
+      "focus_entities": [
+        "凌默"
+      ],
+      "relevant_threads": [
+        "author.project_premise"
+      ],
+      "must_preserve": [
+        "图书馆关联必须由可回看行为和记录建立",
+        "不得一次解释全部传承真相"
+      ],
+      "risk_checks": [
+        "避免超自然解释，保持悬念",
+        "确保代价具体且符合高三现实"
+      ],
+      "target_chars": 5000,
+      "accepted_chars": 0,
+      "status": "planned"
+    }
+  ],
+  "planner_model": "deepseek-v4-flash",
+  "created_at": "2026-08-02T14:12:23+00:00"
+}

@@ -1,0 +1,183 @@
+{
+  "schema_version": "arc-plan-review/v1",
+  "arc_id": "arc_0002_a2cb87355f56",
+  "blocking": true,
+  "issues": [
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 2,
+      "message": "payoff 不是可检验的短事件标签：同桌或班主任至少一次询问纱布原因，凌默给出不暴露传承的合理解释（如切水果或烫伤），解释在后续章节不能被拆穿",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 2,
+      "message": "payoff 不是可检验的短事件标签：数学课上至少出现一次注意力或精力波动，但凌默仍完成课堂任务，体现‘脑子能转、眼睛干涩’并存的身体状态",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 2,
+      "message": "payoff 不是可检验的短事件标签：错题本最后一页新增一条包含时间、症状、疑似触发条件的记录，或凌默在课间完成这一记录",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 2,
+      "message": "payoff 不是可检验的短事件标签：章末呈现睡眠债的具体代价：白天靠异常清醒撑住，但身体出现新的微信号（如指节发僵、热流窜动频率变化），为夜晚监测埋线",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.obvious_word_error",
+      "severity": "blocking",
+      "chapter_number": 2,
+      "message": "出现疑似错词“新的微信号”，语义应重新核对。",
+      "repair_hint": "根据上下文改为明确的身体信号，不得机械替换后直接通过。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 3,
+      "message": "payoff 不是可检验的短事件标签：第2章埋下的红纹或发作间隔变化在第3章得到复核：凌默确认这不是偶然，并找出至少一个疑似相关变量（如饮水、睡眠、情绪、低头看书时长）",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 3,
+      "message": "payoff 不是可检验的短事件标签：在一次短时发作中，凌默尝试‘不引气、只观察’的被动记录方式，并验证它能降低热流的失控感",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 3,
+      "message": "payoff 不是可检验的短事件标签：课堂学习不受影响：至少一次小测验或课堂提问中，凌默表现正常，强化高三主线",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 3,
+      "message": "payoff 不是可检验的短事件标签：日志记录从‘事后补记’转为‘即时简要记录’，形成固定字段",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 3,
+      "message": "payoff 不是可检验的短事件标签：值班老师或图书馆管理员出现一次，为后续图书馆阅读习惯提供过渡（不解释传承）",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 4,
+      "message": "payoff 不是可检验的短事件标签：第3章结尾的‘十五分钟误差’被归因验证：凌默回查日志，发现发作前有一项未记录的活动（如午休趴睡、喝冷水、用眼过度），并把该变量纳入监测",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 4,
+      "message": "payoff 不是可检验的短事件标签：形成一次真正的单变量试验：在保持其他条件不变的前提下，有意识地调整一个变量（如避免某一动作），观察发作是否延迟或减弱",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 4,
+      "message": "payoff 不是可检验的短事件标签：试验过程中出现一次失败或不适：热流没有如预期变化，证明身体变化不会轻易被控制，保留困难感",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 4,
+      "message": "payoff 不是可检验的短事件标签：学习层面出现一次可见代价：如数学作业被老师批注错误、英语听写错词，凌默必须用课间时间弥补",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 4,
+      "message": "payoff 不是可检验的短事件标签：凌默主动向同桌或家人隐瞒具体原因，但至少对一个日常对象做出不引发追问的边界表态（如‘最近睡眠不好’）",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 5,
+      "message": "payoff 不是可检验的短事件标签：凌默在错题本上列出监测字段：时间、前1小时活动、发作时长、强度等级、当天睡眠，不借用任何超自然工具",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 5,
+      "message": "payoff 不是可检验的短事件标签：他执行一次‘按方案记录’的完整白天流程，证明这套方法不需要请假、不需要离开教室也能操作",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 5,
+      "message": "payoff 不是可检验的短事件标签：半天高强度学习（如上午主科连堂加午间小测）后，凌默出现明显疲劳，但他通过记录本身稳住节奏，没有在课堂上失控",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 5,
+      "message": "payoff 不是可检验的短事件标签：身体变化出现新信息：左手红纹的深浅程度与前一天记录强度有对应关系，但没有继续恶化到需要就医",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 5,
+      "message": "payoff 不是可检验的短事件标签：图书馆元素自然落地：凌默利用放学后时间在图书馆查阅资料，不是为了找传承答案，而是延续‘在能控制前先不影响学习’的日常策略",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 6,
+      "message": "payoff 不是可检验的短事件标签：第5章提出的‘睡满六小时’目标在第6章执行：凌默提前完成作业、设定入睡时间，开始尝试正常作息",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 6,
+      "message": "payoff 不是可检验的短事件标签：夜间因为身体原因没能完全执行：入睡后或睡前一小时出现热流发作，导致实际睡眠不足六小时，但凌默没有彻底放弃，而是记录了中断原因",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 6,
+      "message": "payoff 不是可检验的短事件标签：凌默根据夜间记录调整方案，明确新问题，如‘不能刚吃完饭就躺下’或‘睡前需要留出记录缓冲时间’，展示滚动调整能力",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 6,
+      "message": "payoff 不是可检验的短事件标签：次日早上没有爆发性戏剧冲突：凌默带着轻微疲倦和一份完整记录去上学，证明这套方法已经可以陪伴他日常运转",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    },
+    {
+      "code": "arc.payoff_not_atomic",
+      "severity": "blocking",
+      "chapter_number": 6,
+      "message": "payoff 不是可检验的短事件标签：第2章的合理解释在跨度后仍然稳定，没有被后续对话拆穿",
+      "repair_hint": "将 payoff 压缩为 4-20 字短事件；详细条件移入 acceptance_criteria。"
+    }
+  ],
+  "reviewed_at": "2026-08-02T13:15:53+00:00"
+}

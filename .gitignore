@@ -1,4 +1,9 @@
 __pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 .env
 .env.*
 *.pyc
@@ -21,3 +26,8 @@ AGENTS.md
 *.cache
 *.db-wal
 *.db-shm
+/tmp/pdfs/
+/我的左眼是阴阳眼 (乌啼霜满天) (Z-Library).pdf
+/experiments/auxiliary_models_v1/data/
+/experiments/auxiliary_models_v1/runs/
+/experiments/auxiliary_models_v1/.cache/

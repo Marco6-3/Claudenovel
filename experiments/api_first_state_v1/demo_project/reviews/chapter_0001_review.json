@@ -1,0 +1,11 @@
+{
+  "chapter_number": 1,
+  "ok": true,
+  "blocking": false,
+  "issues": [],
+  "rewrite_instructions": [],
+  "draft_sha256": "0b8b739f2cea064bb92ec77d0cfb3266f60b5d319df7232de16d7365adcfc9a9",
+  "contract_sha256": "b1a1969ddac7ec05ea7ca06ff309c7d8e067b5a507e264b77afa2b3dea59916b",
+  "constraints_sha256": "e16cd7cc3cfaf433e116d04b115f230cfdeee64ba0ab39371c1465456a57e3cb",
+  "reviewed_at": "2026-08-02T07:38:49+00:00"
+}

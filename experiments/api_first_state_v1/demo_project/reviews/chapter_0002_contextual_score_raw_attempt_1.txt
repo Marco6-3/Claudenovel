@@ -1,0 +1,110 @@
+{
+  "dimensions": [
+    {
+      "dimension": "contract_fidelity",
+      "score": 9,
+      "rationale": "本章完成合同要求的早读与数学连堂中应对同桌和班主任询问，并首次在课上记录身体异常，建立日志习惯。解释为烫伤，未引入超自然设定。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": [
+        "“昨晚倒开水，没拿稳，烫了一下。”",
+        "“早读7:35 左手灼痛，眼花数秒。疑似：久坐未动？\n数学8:20 被点名，指节僵，眼花。答毕缓解。疑似：精神集中？”"
+      ]
+    },
+    {
+      "dimension": "boundary_continuity",
+      "score": 8,
+      "rationale": "开头承接上一章七点整走进教室，时间推进到七点一刻，未跳过睡眠或修复。但未明确提及凌晨四点后的状态，略有模糊。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P003"],
+      "state_ids": ["entity.lingmo.left_hand_bandaged"],
+      "draft_quotes": [
+        "七点一刻，教室里的座位填了大半。"
+      ]
+    },
+    {
+      "dimension": "character_state_and_knowledge",
+      "score": 9,
+      "rationale": "凌默保持清醒但眼睛干涩，左手灼痛和麻木状态延续，未清零。他记录症状并思考控制变量，符合知识增长。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P002"],
+      "state_ids": ["entity.lingmo.inherited_heat_state"],
+      "draft_quotes": [
+        "脑子在这一刻清楚得过分。他甚至记得昨天赵老师在同一道题上反复强调过的两个易错点。",
+        "一个整夜没睡的人，白天一滴觉都不补，还能一整天清醒地做题——这比困本身更可疑。"
+      ]
+    },
+    {
+      "dimension": "timeline_and_causality",
+      "score": 9,
+      "rationale": "时间线清晰：早读、数学课、午间、下午、晚自习。发作间隔缩短的因果链明确，从凌晨到白天。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P001"],
+      "state_ids": [],
+      "draft_quotes": [
+        "凌晨：一点半——两点五十——四点十分，间隔都在八十分钟上下。白天：七点三十五——八点二十，间隔四十五分钟。"
+      ]
+    },
+    {
+      "dimension": "world_rule_resource_and_injury",
+      "score": 8,
+      "rationale": "左手纱布未取下，灼痛减弱但存在，符合合同。新增红纹是身体变化的一部分，未引入新超自然规则。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P001"],
+      "state_ids": ["entity.lingmo.left_hand_bandaged"],
+      "draft_quotes": [
+        "皮肤底下透出几道淡红色的纹路，从腕骨弯弯绕绕伸向指根，像有什么东西沿着一条看不见的路线走了一遍。"
+      ]
+    },
+    {
+      "dimension": "relationship_and_open_threads",
+      "score": 9,
+      "rationale": "同桌周航和班主任赵老师的询问得到合理解释，周航主动帮忙带饭，关系推进。解释未被拆穿，为后续埋线。",
+      "prior_evidence_ids": ["open.lingmo.explain_bandage"],
+      "state_ids": ["open.lingmo.explain_bandage"],
+      "draft_quotes": [
+        "“那你午饭怎么办？我帮你带两天。”",
+        "“别沾水。这周值日你不用做了，我跟劳动委员说一声。”"
+      ]
+    },
+    {
+      "dimension": "style_and_voice",
+      "score": 8,
+      "rationale": "整体风格写实，聚焦身体变化和校园日常，未出现恐怖符号。但结尾走廊声控灯和影子略有恐怖倾向，但未成套使用，且与身体变化关联。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": [
+        "走廊黑了一瞬，声控灯在他走到一半时亮起来，白色光照出墙上拉长的影子。"
+      ]
+    },
+    {
+      "dimension": "payoff_and_readability",
+      "score": 9,
+      "rationale": "章末揭示发作间隔缩短和红纹，凌默决定控制变量，呼应合同要求。可读性强，节奏紧凑。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": [
+        "“明天起，同一时间只做同一件事。早饭内容、坐姿、翻页速度、被提问顺序全部固定，一次只改一个变量。不再只是记时间。”"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "code": "boundary.temporal",
+      "severity": "warning",
+      "dimension": "boundary_continuity",
+      "message": "章节开头未明确提及凌晨四点后的状态，但时间推进合理，未违反连续性。",
+      "draft_quote": "七点一刻，教室里的座位填了大半。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P003"],
+      "state_ids": [],
+      "minimal_fix": "可添加一句如“他七点整走进教室，在座位上坐定”以更明确承接。"
+    },
+    {
+      "code": "style.horror_drift",
+      "severity": "warning",
+      "dimension": "style_and_voice",
+      "message": "结尾走廊声控灯和影子有轻微恐怖倾向，但未成套使用，且与身体变化关联，可接受。",
+      "draft_quote": "走廊黑了一瞬，声控灯在他走到一半时亮起来，白色光照出墙上拉长的影子。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "minimal_fix": "可改为更中性的描写，如“走廊的灯在他走到一半时亮起来，照出他独自一人的身影。”"
+    }
+  ],
+  "confidence": 0.9
+}

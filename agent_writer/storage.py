@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
+import tempfile
 from pathlib import Path
 from typing import TypeVar
 
@@ -15,11 +17,17 @@ DIRS = (
     "story_bible",
     "expectations",
     "chapter_contracts",
+    "arc_contracts",
     "prompts",
     "drafts",
     "reviews",
     "accepted",
     "commits",
+    "state",
+    "state/evidence",
+    "state/deltas",
+    "state/context",
+    "state/prompts",
 )
 
 
@@ -62,6 +70,31 @@ def write_json(path: Path, payload: BaseModel | dict[str, object]) -> Path:
     return path
 
 
+def write_text_atomic(path: Path, text: str) -> Path:
+    """Replace a UTF-8 file atomically within its destination directory."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        raise
+    return path
+
+
+def write_json_atomic(path: Path, payload: BaseModel | dict[str, object]) -> Path:
+    if isinstance(payload, BaseModel):
+        data = payload.model_dump(mode="json")
+    else:
+        data = payload
+    return write_text_atomic(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+
 def read_json(path: Path) -> dict[str, object]:
     return json.loads(read_text(path))
 
@@ -78,6 +111,14 @@ def copy_utf8(src: Path, dst: Path) -> Path:
         raise ValueError(f"{src} is not valid UTF-8") from exc
     dst.write_text(text, encoding="utf-8")
     return dst
+
+
+def copy_utf8_atomic(src: Path, dst: Path) -> Path:
+    try:
+        text = src.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"{src} is not valid UTF-8") from exc
+    return write_text_atomic(dst, text)
 
 
 def copy_binary(src: Path, dst: Path) -> Path:

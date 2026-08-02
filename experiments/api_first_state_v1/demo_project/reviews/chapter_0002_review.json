@@ -1,0 +1,77 @@
+{
+  "chapter_number": 2,
+  "ok": false,
+  "blocking": true,
+  "issues": [
+    {
+      "code": "missing_idea_lock",
+      "severity": "blocking",
+      "message": "缺失外部创意锁：左手纱布在第2章内不得取下或痊愈，灼痛感可以减弱但不能消失",
+      "evidence": "",
+      "repair_hint": "回到人类提供的外部创意补写该核心要求；不得用另一个点子替代。"
+    },
+    {
+      "code": "missing_idea_lock",
+      "severity": "blocking",
+      "message": "缺失外部创意锁：数学错题本最后一页继续作为日志载体，不换成新工具",
+      "evidence": "",
+      "repair_hint": "回到人类提供的外部创意补写该核心要求；不得用另一个点子替代。"
+    },
+    {
+      "code": "missing_idea_lock",
+      "severity": "blocking",
+      "message": "缺失外部创意锁：凌默的合理解释不能引入新超自然设定或新鬼怪，不能提到图书馆、传承、经脉",
+      "evidence": "",
+      "repair_hint": "回到人类提供的外部创意补写该核心要求；不得用另一个点子替代。"
+    },
+    {
+      "code": "missing_required_payoff",
+      "severity": "blocking",
+      "message": "缺失本章必须兑现项：同桌或班主任至少一次询问纱布原因，凌默给出不暴露传承的合理解释（如切水果或烫伤），解释在后续章节不能被拆穿",
+      "evidence": "",
+      "repair_hint": "重写核心场景，明确兑现该 payoff，而不是只在旁白中暗示。"
+    },
+    {
+      "code": "missing_required_payoff",
+      "severity": "blocking",
+      "message": "缺失本章必须兑现项：数学课上至少出现一次注意力或精力波动，但凌默仍完成课堂任务，体现‘脑子能转、眼睛干涩’并存的身体状态",
+      "evidence": "",
+      "repair_hint": "重写核心场景，明确兑现该 payoff，而不是只在旁白中暗示。"
+    },
+    {
+      "code": "missing_required_payoff",
+      "severity": "blocking",
+      "message": "缺失本章必须兑现项：错题本最后一页新增一条包含时间、症状、疑似触发条件的记录，或凌默在课间完成这一记录",
+      "evidence": "",
+      "repair_hint": "重写核心场景，明确兑现该 payoff，而不是只在旁白中暗示。"
+    },
+    {
+      "code": "missing_required_payoff",
+      "severity": "blocking",
+      "message": "缺失本章必须兑现项：章末呈现睡眠债的具体代价：白天靠异常清醒撑住，但身体出现新的微信号（如指节发僵、热流窜动频率变化），为夜晚监测埋线",
+      "evidence": "",
+      "repair_hint": "重写核心场景，明确兑现该 payoff，而不是只在旁白中暗示。"
+    },
+    {
+      "code": "weak_or_missing_ending_hook",
+      "severity": "risk",
+      "message": "章尾没有清晰落到合同指定尾钩。",
+      "evidence": "",
+      "repair_hint": "把最后 3-5 段改写到这个新问题上：放学后凌默翻开错题本，发现白天记录的发作间隔比凌晨缩短，而且左手缠纱布的皮肤底下透出淡淡红纹——他意识到必须把监测从‘记时间’升级为‘控制变量’。"
+    }
+  ],
+  "rewrite_instructions": [
+    "回到人类提供的外部创意补写该核心要求；不得用另一个点子替代。",
+    "回到人类提供的外部创意补写该核心要求；不得用另一个点子替代。",
+    "回到人类提供的外部创意补写该核心要求；不得用另一个点子替代。",
+    "重写核心场景，明确兑现该 payoff，而不是只在旁白中暗示。",
+    "重写核心场景，明确兑现该 payoff，而不是只在旁白中暗示。",
+    "重写核心场景，明确兑现该 payoff，而不是只在旁白中暗示。",
+    "重写核心场景，明确兑现该 payoff，而不是只在旁白中暗示。",
+    "把最后 3-5 段改写到这个新问题上：放学后凌默翻开错题本，发现白天记录的发作间隔比凌晨缩短，而且左手缠纱布的皮肤底下透出淡淡红纹——他意识到必须把监测从‘记时间’升级为‘控制变量’。"
+  ],
+  "draft_sha256": "ea8009caa6bfc157b51c787dcffd08f5ab9d2f5c149e074a8638b1a773abd434",
+  "contract_sha256": "312a070d1464d984df06a15f66c71e5fff140f885cadd1065b0f0a84f3d56257",
+  "constraints_sha256": "8daf3855df773839c455ae519c2d7a7521821a353db84173b509c807cadb797f",
+  "reviewed_at": "2026-08-02T08:05:22+00:00"
+}

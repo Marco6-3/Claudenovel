@@ -1,0 +1,37 @@
+{
+  "schema_version": "author-policy-score-comparison/v1",
+  "case_id": "api_first_demo_chapter_0002_horror_drift",
+  "data_tier": "teacher_silver_probe",
+  "model": "deepseek-v4-flash",
+  "draft_sha256": "ea8009caa6bfc157b51c787dcffd08f5ab9d2f5c149e074a8638b1a773abd434",
+  "controlled_variables": [
+    "same draft",
+    "same NovelState revision 1",
+    "same scorer model",
+    "same JSON request format",
+    "only AuthorPolicy context changed"
+  ],
+  "before": {
+    "author_policy_revision": 0,
+    "scorecard_file": "demo_project/reviews/chapter_0002_contextual_score_before_author_policy.json",
+    "overall_score": 9.3,
+    "style_and_voice": 9.0,
+    "confidence": 0.95,
+    "blocking": false,
+    "detected_horror_drift": false
+  },
+  "after": {
+    "author_policy_revision": 1,
+    "scorecard_file": "demo_project/reviews/chapter_0002_contextual_score.json",
+    "overall_score": 8.5,
+    "style_and_voice": 7.0,
+    "confidence": 0.9,
+    "blocking": false,
+    "detected_horror_drift": true,
+    "issue_code": "style.horror_drift",
+    "severity": "risk",
+    "validated_draft_quote": "走廊黑了一瞬，声控灯在他走到一半时亮起来，白色光照出墙上拉长的影子。"
+  },
+  "interpretation": "AuthorPolicy context corrected one known scorer miss. This is a single teacher probe, not author Gold accuracy evidence.",
+  "automatic_body_overwrite_allowed": false
+}

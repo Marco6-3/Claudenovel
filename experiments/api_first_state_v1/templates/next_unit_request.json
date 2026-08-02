@@ -1,0 +1,25 @@
+{
+  "schema_version": "unit-request/v1",
+  "planning_mode": "auto",
+  "core_mechanism_locked": true,
+  "start_chapter": 2,
+  "target_total_chars": 12000,
+  "unit_title": "填写本单元名称",
+  "objective": "填写这个单元必须完成的核心变化",
+  "author_intent": "填写你真正想写的事件、情绪和读者体验，不要只写抽象主题",
+  "entry_state": "填写单元开始时人物、伤势、资源、关系和未解线索状态",
+  "target_end_state": "填写单元结束时必须达到、且能在正文中验证的状态",
+  "unit_payoffs": [
+    "填写至少一个必须兑现的具体事件或信息"
+  ],
+  "author_locks": [
+    "填写模型绝不能替换的核心机制、人物选择或因果链"
+  ],
+  "forbidden_changes": [
+    "填写本单元不得改变的世界规则、人物关系或叙事方向"
+  ],
+  "success_criteria": [
+    "填写完成后人工可以直接判断通过或不通过的标准"
+  ],
+  "freedom_axes": []
+}

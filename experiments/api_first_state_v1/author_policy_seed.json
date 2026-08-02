@@ -1,0 +1,84 @@
+{
+  "schema_version": "author-policy-bundle/v1",
+  "source_label": "作者历史反馈与API-first方向收敛_20260802",
+  "rules": [
+    {
+      "rule_id": "direction.high_school_body_change",
+      "category": "narrative_direction",
+      "instruction": "开篇和当前校园阶段优先描写高三学生面对身体变化、伤势、睡眠、学习压力及现实人际询问；超自然传承是原因和压力来源，不得把叙事重心改成恐怖探险。",
+      "severity": "blocking",
+      "applies_to": ["planner", "writer", "scorer", "rewriter"],
+      "rationale": "作者明确要求降低前部恐怖悬疑感，突出高中生面对身体变化的问题。",
+      "avoid_examples": ["用连续恐怖意象替代身体变化与现实代价"],
+      "preferred_examples": ["伤势处理、睡眠债、课堂表现、同学老师询问、控制变量记录"],
+      "source_refs": ["docs/research/AUTHOR_REQUIREMENTS_AND_EVIDENCE_BASELINE_V1.md"],
+      "authority": "author_locked",
+      "active": true
+    },
+    {
+      "rule_id": "tone.avoid_horror_drift",
+      "category": "style_and_tone",
+      "instruction": "除非本轮作者合同明确要求，不使用空走廊、声控灯、拉长影子等成套恐怖符号制造章尾刺激；章尾增量应来自身体变化、人物选择、现实代价或已授权线索。",
+      "severity": "risk",
+      "applies_to": ["planner", "writer", "scorer", "rewriter"],
+      "rationale": "现有第2章真实 Writer 稿在校园现实线后突然回到恐怖走廊，偏离作者方向。",
+      "avoid_examples": ["空走廊、熄灭的声控灯、被拉长的影子连续出现"],
+      "preferred_examples": ["身体症状频率变化迫使凌默调整监测方法"],
+      "source_refs": ["experiments/api_first_state_v1/demo_project/drafts/chapter_0002_draft.md"],
+      "authority": "author_locked",
+      "active": true
+    },
+    {
+      "rule_id": "tone.serious_scene_register",
+      "category": "style_and_tone",
+      "instruction": "危险、严肃或高压场景避免会消解紧张感的喜剧食物比喻；比喻必须符合人物视角、场景语域和当时情绪。",
+      "severity": "risk",
+      "applies_to": ["writer", "scorer", "rewriter"],
+      "rationale": "作者认为‘像一块散发着香味的红烧肉’虽然意思能懂，但不适合该危险场景。",
+      "avoid_examples": ["像一块散发着香味的红烧肉"],
+      "preferred_examples": [],
+      "source_refs": ["experiments/auxiliary_models_v1/annotation/feedback/author_feedback_20260801_quick003.json"],
+      "authority": "author_locked",
+      "active": true
+    },
+    {
+      "rule_id": "continuity.boundary_carryover",
+      "category": "continuity",
+      "instruction": "章节开头必须显式承接上一章的时间、睡眠、伤势、地点和正在进行的行动；不得把凌晨四点后的几小时写成修复一整夜，也不得凭空补出入睡、醒来或已见过的人物。",
+      "severity": "blocking",
+      "applies_to": ["planner", "writer", "scorer", "rewriter"],
+      "rationale": "作者人工终稿曾修复第1到第2章的时间与睡眠行动链。",
+      "avoid_examples": ["七点差一刻仍清醒，下一章却直接被疼醒", "首次出现的老者写成比上次更透明"],
+      "preferred_examples": ["明确后半夜未眠或短暂眯过，并保持伤势时长一致"],
+      "source_refs": ["experiments/human_feedback_v1/feedback_records/lianqi_opening_boundary_ch01_ch02_v1/feedback.json"],
+      "authority": "author_locked",
+      "active": true
+    },
+    {
+      "rule_id": "revision.one_issue_minimal_scope",
+      "category": "revision_scope",
+      "instruction": "一次修订只解决作者指定的一个问题，采用能够解决问题的最小改动；确实必须改动其他情节时先停下并征求作者同意。",
+      "severity": "blocking",
+      "applies_to": ["scorer", "rewriter"],
+      "rationale": "作者要求只有真正需要修改其他情节时才征求同意并修改。",
+      "avoid_examples": ["修连续性时顺手新增长期世界规则或重写无关人物线"],
+      "preferred_examples": ["只改时间词、首次见面措辞或必要的过渡句"],
+      "source_refs": ["docs/research/AUTHOR_REQUIREMENTS_AND_EVIDENCE_BASELINE_V1.md"],
+      "authority": "author_locked",
+      "active": true
+    },
+    {
+      "rule_id": "unit.intent_bounded_20k",
+      "category": "unit_planning",
+      "instruction": "只规划作者指定的下一个单元剧；章数按事件自然决定，正文总量不超过2万字，达到目标结束状态后停止并等待作者给出下一单元意图。",
+      "severity": "blocking",
+      "applies_to": ["planner", "scorer"],
+      "rationale": "作者明确否定连续写几十章和八章硬上限。",
+      "avoid_examples": ["自动延展更远主线", "为了固定章数拆碎同一事件"],
+      "preferred_examples": ["单元闭环后交回作者"],
+      "source_refs": ["docs/research/AUTHOR_REQUIREMENTS_AND_EVIDENCE_BASELINE_V1.md"],
+      "authority": "author_locked",
+      "active": true
+    }
+  ]
+}

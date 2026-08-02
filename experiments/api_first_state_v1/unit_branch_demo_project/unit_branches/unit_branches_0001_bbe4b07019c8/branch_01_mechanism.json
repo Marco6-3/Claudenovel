@@ -1,0 +1,115 @@
+{
+  "schema_version": "unit-branch-card/v1",
+  "branch_id": "branch_01_mechanism",
+  "planning_profile": "mechanism",
+  "unit_title": "监测与因果",
+  "approach_summary": "凌默在高三现实压力下，通过建立异常日志和控制变量方法，逐步确认图书馆接触频率与身体变化之间的可验证关联，同时承受现实代价。",
+  "distinctive_choice": "以科学控制变量法作为核心机制，而非依赖超自然直觉或他人告知。",
+  "fingerprint": {
+    "conflict_space": "高三教室、图书馆、家庭卧室",
+    "trigger": "凌默发现左手热流频率与图书馆借阅次数同步上升",
+    "core_mechanism": "控制变量法：固定其他因素，改变图书馆接触频率，记录身体反应",
+    "climax_action": "凌默主动设计并执行一次对照实验：连续三天不去图书馆，对比症状频率，确认因果",
+    "cost_type": "学习时间减少、睡眠进一步恶化、同学关系紧张",
+    "end_hook": "发现图书馆接触频率与症状存在正相关，但无法解释机制，留下传承真相的疑问"
+  },
+  "beats": [
+    {
+      "chapter_number": 1,
+      "title": "异常日志",
+      "goal": "凌默建立初步的异常日志，记录身体变化与日常活动的关联。",
+      "required_payoffs": [
+        "建立异常日志"
+      ],
+      "acceptance_criteria": [
+        "正文中出现凌默记录症状的笔记本或手机备忘录",
+        "日志包含日期、时间、症状类型和强度、当日活动（特别是图书馆）",
+        "凌默在记录中注意到左手热流频率与去图书馆次数的初步关联"
+      ],
+      "ending_hook": "凌默发现连续三天去图书馆后，左手热流频率明显增加，但不确定是否巧合。",
+      "focus_entities": [
+        "凌默"
+      ],
+      "relevant_threads": [
+        "author.project_premise"
+      ],
+      "must_preserve": [
+        "高三学习压力",
+        "睡眠问题",
+        "图书馆作为触发地点"
+      ],
+      "risk_checks": [
+        "避免恐怖符号",
+        "保持现实叙事主体"
+      ],
+      "target_chars": 3000,
+      "accepted_chars": 0,
+      "status": "planned"
+    },
+    {
+      "chapter_number": 2,
+      "title": "控制变量",
+      "goal": "凌默设计并执行控制变量实验，排除其他因素，验证图书馆关联。",
+      "required_payoffs": [
+        "确认图书馆关联"
+      ],
+      "acceptance_criteria": [
+        "凌默设定一周实验计划：固定睡眠、饮食、学习时间，仅改变图书馆访问频率",
+        "正文中展示至少两条可核对的行为证据：如图书馆门禁记录或借阅记录与症状日志的对比",
+        "凌默在实验中因减少图书馆访问而出现学习进度落后或同学询问"
+      ],
+      "ending_hook": "实验结果显示：不去图书馆的日子症状频率显著下降，但凌默因缺课被老师约谈。",
+      "focus_entities": [
+        "凌默",
+        "老师"
+      ],
+      "relevant_threads": [
+        "author.project_premise"
+      ],
+      "must_preserve": [
+        "控制变量方法",
+        "现实代价"
+      ],
+      "risk_checks": [
+        "避免突然爆种",
+        "保持因果可验证"
+      ],
+      "target_chars": 4000,
+      "accepted_chars": 0,
+      "status": "planned"
+    },
+    {
+      "chapter_number": 3,
+      "title": "代价与线索",
+      "goal": "凌默接受现实代价，同时获得图书馆关联的进一步线索，但保留传承真相的疑问。",
+      "required_payoffs": [
+        "现实代价升级"
+      ],
+      "acceptance_criteria": [
+        "凌默因实验导致成绩下滑或睡眠严重不足，在课堂上表现不佳",
+        "凌默在图书馆发现一本旧书或借阅记录，暗示传承与图书馆的关联",
+        "单元结束时，凌默决定继续监测，但明确知道机制未知"
+      ],
+      "ending_hook": "凌默在日志中写下：图书馆频率与症状正相关，但为什么？他决定继续调查，但先要应付月考。",
+      "focus_entities": [
+        "凌默"
+      ],
+      "relevant_threads": [
+        "author.project_premise"
+      ],
+      "must_preserve": [
+        "传承真相不一次解释",
+        "现实问题为主体"
+      ],
+      "risk_checks": [
+        "不得引入恐怖元素",
+        "不得自动规划后续主线"
+      ],
+      "target_chars": 5000,
+      "accepted_chars": 0,
+      "status": "planned"
+    }
+  ],
+  "planner_model": "deepseek-v4-flash",
+  "created_at": "2026-08-02T14:17:34+00:00"
+}

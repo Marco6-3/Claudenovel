@@ -1,0 +1,51 @@
+{
+  "schema_version": "novel-state/v1",
+  "project_id": "novel-2cc0d24a2b53",
+  "project_name": "练气仙诀_单元分支隔离演示",
+  "revision": 0,
+  "latest_committed_chapter": 0,
+  "latest_state_synced_chapter": 0,
+  "canon_facts": [],
+  "timeline": [],
+  "entity_states": [],
+  "character_beliefs": [],
+  "relationship_arcs": [],
+  "open_threads": [],
+  "style_memory": [],
+  "authority_layer": {
+    "precedence": [
+      "author_locked",
+      "text_confirmed",
+      "model_inferred",
+      "model_proposed"
+    ],
+    "rules": [
+      "模型不得创建 author_locked 记录。",
+      "低权限记录不得覆盖高权限记录。",
+      "text_confirmed 与 model_inferred 必须绑定可校验的段落证据。",
+      "model_proposed 默认不进入写作上下文。"
+    ],
+    "author_locks": [
+      {
+        "state_id": "author.project_premise",
+        "subject": "练气仙诀_单元分支隔离演示",
+        "claim": "项目核心前提",
+        "value": "高三学生凌默因频繁去图书馆接触传承，并在学习生活中面对异常清醒、左手热流和身体变化。",
+        "authority": "author_locked",
+        "status": "active",
+        "confidence": 1.0,
+        "evidence_refs": [],
+        "introduced_chapter": 0,
+        "updated_chapter": 0,
+        "tags": [
+          "project",
+          "premise"
+        ],
+        "author_note": "项目初始化时由作者输入，模型不得覆盖。",
+        "supersedes": []
+      }
+    ]
+  },
+  "applied_delta_ids": [],
+  "updated_at": "2026-08-02T14:12:11+00:00"
+}

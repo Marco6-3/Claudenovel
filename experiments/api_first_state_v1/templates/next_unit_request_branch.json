@@ -1,0 +1,29 @@
+{
+  "schema_version": "unit-request/v1",
+  "planning_mode": "branch",
+  "core_mechanism_locked": false,
+  "start_chapter": 2,
+  "target_total_chars": 12000,
+  "unit_title": "填写本单元名称",
+  "objective": "填写三个方案都必须完成的核心变化",
+  "author_intent": "填写共同的作者意图，同时明确哪些事件机制允许模型提出不同方案",
+  "entry_state": "填写单元开始状态",
+  "target_end_state": "填写三个方案共同的目标结束状态",
+  "unit_payoffs": [
+    "填写共同必须兑现的具体事件"
+  ],
+  "author_locks": [
+    "填写三个方案都不能改变的作者锁"
+  ],
+  "forbidden_changes": [
+    "填写三个方案都不得触碰的变化"
+  ],
+  "success_criteria": [
+    "填写共同验收标准"
+  ],
+  "freedom_axes": [
+    "conflict_space",
+    "cost_type",
+    "end_hook"
+  ]
+}

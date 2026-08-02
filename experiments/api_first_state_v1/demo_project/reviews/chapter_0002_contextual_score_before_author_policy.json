@@ -1,0 +1,155 @@
+{
+  "schema_version": "contextual-scorecard/v1",
+  "chapter_number": 2,
+  "model": "deepseek-v4-flash",
+  "draft_sha256": "ea8009caa6bfc157b51c787dcffd08f5ab9d2f5c149e074a8638b1a773abd434",
+  "context_sha256": "6204c1d08749641aa1092be292eca0c760a9c5599ebbfdb9b938d76dec4f8598",
+  "state_revision": 1,
+  "dimensions": [
+    {
+      "dimension": "contract_fidelity",
+      "score": 9.0,
+      "rationale": "本章完整实现了章节合同中的 Beat：凌默在语文早读和两节数学连堂中成功应对同桌与班主任对左手纱布的询问，并首次在课上记录身体异常，建立初步日志习惯。所有 idea_locks 均被遵守：左手纱布未取下或痊愈，灼痛感减弱但未消失；数学错题本最后一页继续作为日志载体；解释未引入新超自然设定或新鬼怪，未提到图书馆、传承、经脉。required_payoffs 全部兑现：同桌周航和班主任赵老师均询问纱布原因，凌默给出合理解释（烫伤）；数学课上出现注意力波动（被点名时指节僵、眼花），但完成课堂任务；错题本新增记录包含时间、症状、疑似触发条件；章末呈现睡眠债代价（指节发僵、热流窜动频率变化、红纹出现）。",
+      "prior_evidence_ids": [],
+      "state_ids": [
+        "author.project_premise",
+        "entity.lingmo.inherited_heat_state",
+        "entity.lingmo.left_hand_bandaged",
+        "open.lingmo.explain_bandage"
+      ],
+      "draft_quotes": [
+        "“昨晚倒开水，没拿稳，烫了一下。”",
+        "“早读7:35 左手灼痛，眼花数秒。疑似：久坐未动？\n数学8:20 被点名，指节僵，眼花。答毕缓解。疑似：精神集中？”",
+        "“明天起，同一时间只做同一件事。早饭内容、坐姿、翻页速度、被提问顺序全部固定，一次只改一个变量。不再只是记时间。”"
+      ]
+    },
+    {
+      "dimension": "boundary_continuity",
+      "score": 10.0,
+      "rationale": "本章与第一章结尾无缝衔接：第一章结尾凌默带着伤走进教室，本章从七点一刻教室场景开始。时间线连续，从早读、数学连堂、午间、下午到晚自习，符合一天的时间推进。前文状态（左手纱布、灼痛、错题本记录）均被延续，没有矛盾。",
+      "prior_evidence_ids": [
+        "novel-5b4f5b9dd99f:CH0001-P001",
+        "novel-5b4f5b9dd99f:CH0001-P002",
+        "novel-5b4f5b9dd99f:CH0001-P003"
+      ],
+      "state_ids": [
+        "entity.lingmo.inherited_heat_state",
+        "entity.lingmo.left_hand_bandaged",
+        "open.lingmo.explain_bandage"
+      ],
+      "draft_quotes": [
+        "七点一刻，教室里的座位填了大半。",
+        "晚自习结束铃响，教室的人走光了。"
+      ]
+    },
+    {
+      "dimension": "character_state_and_knowledge",
+      "score": 9.0,
+      "rationale": "凌默的状态与知识符合前文：他知晓传承热流、发作时间记录，但未向任何人透露。他应对询问时保持冷静，解释合理。他的知识水平（数学解题能力）与高三学生相符。他意识到发作间隔缩短，并决定升级监测方法，符合角色认知发展。",
+      "prior_evidence_ids": [
+        "novel-5b4f5b9dd99f:CH0001-P001",
+        "novel-5b4f5b9dd99f:CH0001-P002",
+        "novel-5b4f5b9dd99f:CH0001-P003"
+      ],
+      "state_ids": [
+        "entity.lingmo.inherited_heat_state",
+        "entity.lingmo.left_hand_bandaged",
+        "open.lingmo.explain_bandage"
+      ],
+      "draft_quotes": [
+        "他不动声色地把左胳膊从桌上撤下去，搁在膝盖上，手指蜷进纱布里。",
+        "他开口，声音稳定得像在背广播稿：“先构造函数g(x)=f(x)-x，求导之后分参数讨论单调区间，端点处单独验一遍。”"
+      ]
+    },
+    {
+      "dimension": "timeline_and_causality",
+      "score": 10.0,
+      "rationale": "时间线清晰：早读、数学连堂、午间、下午、晚自习，顺序合理。因果链明确：发作间隔缩短导致凌默决定升级监测方法。前文提到的“脑子能转、眼睛干涩”在本章得到体现，并作为症状记录。",
+      "prior_evidence_ids": [
+        "novel-5b4f5b9dd99f:CH0001-P002"
+      ],
+      "state_ids": [
+        "entity.lingmo.inherited_heat_state"
+      ],
+      "draft_quotes": [
+        "早读7:35 左手灼痛，眼花数秒。疑似：久坐未动？",
+        "不到半天，间隔几乎短了一半。"
+      ]
+    },
+    {
+      "dimension": "world_rule_resource_and_injury",
+      "score": 9.0,
+      "rationale": "身体变化规则保持一致：灼痛、热流、发作时间、频率变化均符合前文设定。没有引入新的超自然力量或资源。伤势（左手烫伤）未痊愈，纱布未取下，符合 idea_lock。睡眠债的代价（指节发僵、红纹）作为新症状出现，为后续埋线。",
+      "prior_evidence_ids": [
+        "novel-5b4f5b9dd99f:CH0001-P001",
+        "novel-5b4f5b9dd99f:CH0001-P002"
+      ],
+      "state_ids": [
+        "entity.lingmo.inherited_heat_state",
+        "entity.lingmo.left_hand_bandaged"
+      ],
+      "draft_quotes": [
+        "皮肤底下透出几道淡红色的纹路，从腕骨弯弯绕绕伸向指根，像有什么东西沿着一条看不见的路线走了一遍。"
+      ]
+    },
+    {
+      "dimension": "relationship_and_open_threads",
+      "score": 9.0,
+      "rationale": "同桌周航和班主任赵老师的互动自然，询问纱布原因并给出帮助，符合角色关系。前文 open_thread（如何解释纱布）得到解决，但新的 open_thread 出现：凌默决定控制变量，为后续章节埋下伏笔。",
+      "prior_evidence_ids": [
+        "novel-5b4f5b9dd99f:CH0001-P003"
+      ],
+      "state_ids": [
+        "open.lingmo.explain_bandage"
+      ],
+      "draft_quotes": [
+        "“你这手怎么回事，包得跟粽子似的。”",
+        "“凌默，手怎么了？”"
+      ]
+    },
+    {
+      "dimension": "style_and_voice",
+      "score": 9.0,
+      "rationale": "叙述风格与第一章一致，简洁、克制，注重细节描写。语言流畅，比喻贴切（如“声音像浸了水”）。视角保持凌默的内心活动，符合高中生身份。",
+      "prior_evidence_ids": [
+        "novel-5b4f5b9dd99f:CH0001-P001",
+        "novel-5b4f5b9dd99f:CH0001-P002",
+        "novel-5b4f5b9dd99f:CH0001-P003"
+      ],
+      "state_ids": [],
+      "draft_quotes": [
+        "全班拖着长音念古文，声音像浸了水，湿漉漉地贴在墙上。",
+        "下午的课像在水里泡过一遍，闷且绵长。"
+      ]
+    },
+    {
+      "dimension": "payoff_and_readability",
+      "score": 9.0,
+      "rationale": "所有 required_payoffs 均得到兑现，结尾 hook 与合同一致：凌默发现发作间隔缩短，并看到红纹，决定升级监测。整体可读性强，节奏紧凑，冲突升级明显。",
+      "prior_evidence_ids": [],
+      "state_ids": [
+        "entity.lingmo.inherited_heat_state"
+      ],
+      "draft_quotes": [
+        "不到半天，间隔几乎短了一半。",
+        "皮肤底下透出几道淡红色的纹路，从腕骨弯弯绕绕伸向指根，像有什么东西沿着一条看不见的路线走了一遍。"
+      ]
+    }
+  ],
+  "overall_score": 9.3,
+  "blocking": false,
+  "issues": [
+    {
+      "code": "boundary.temporal",
+      "severity": "warning",
+      "dimension": "boundary_continuity",
+      "message": "本章时间跨度从早读到晚自习，但未明确提及午休和下午课程的具体时间点，可能影响时间线精确性。",
+      "draft_quote": "午间周航替他带饭，不锈钢碗堆得冒尖。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "minimal_fix": "可添加具体时间点，如“午间十二点”或“下午第一节课前”，以增强时间连续性。"
+    }
+  ],
+  "confidence": 0.95,
+  "scored_at": "2026-08-02T13:42:28+00:00"
+}

@@ -1,0 +1,134 @@
+{
+  "schema_version": "contextual-scorecard/v1",
+  "chapter_number": 1,
+  "model": "deepseek-v4-flash",
+  "draft_sha256": "0b8b739f2cea064bb92ec77d0cfb3266f60b5d319df7232de16d7365adcfc9a9",
+  "context_sha256": "244f7a4c8df3abc6b4bae602c7119cc249a70c439ce0f846ccb936e991aacbb6",
+  "state_revision": 0,
+  "dimensions": [
+    {
+      "dimension": "contract_fidelity",
+      "score": 9.0,
+      "rationale": "正文兑现章节合同的全部创意锁：凌晨记录发作时间、六点四十五分包扎左手、七点带伤走进教室；明确写出'昨夜没有睡，但身体反常地清醒'和'把每次发作的时间记在数学错题本最后一页'。结尾'带着伤走进教室'完成local叙事弧。因正文过短，冲突升级与'核心创意在事件中被看见'的兑现度有限，扣1分。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": [
+        "昨夜没有睡，但身体反常地清醒",
+        "把每次发作的时间记在数学错题本最后一页",
+        "他带着伤走进教室"
+      ]
+    },
+    {
+      "dimension": "boundary_continuity",
+      "score": 8.0,
+      "rationale": "正文与author_locked的项目前提（高中生凌默在高三学业压力中学习控制图书馆传承造成的身体变化）连续；传承热流、左手术伤、高三早读与数学连堂均在前提内。未新增未授权系统数值或力量体系。因context中无前文章节可对照，且'图书馆'传承这一来源细节由state提供而正文未提及，扣2分。",
+      "prior_evidence_ids": [],
+      "state_ids": [
+        "author.project_premise"
+      ],
+      "draft_quotes": [
+        "传承留下的热流仍在经脉里乱窜",
+        "第一节是语文早读，上午还有两节数学连堂"
+      ]
+    },
+    {
+      "dimension": "character_state_and_knowledge",
+      "score": 9.0,
+      "rationale": "凌默状态一以贯之：整夜未眠却反常清醒、眼睛干涩、左手灼痛转麻木；'不敢继续引气'表明他对传承力量有初步认知，'必须先想好怎样向同桌和班主任解释'体现高中生身份下的现实顾虑。缺少外部角色反应验证其状态，扣1分。",
+      "prior_evidence_ids": [],
+      "state_ids": [
+        "author.project_premise"
+      ],
+      "draft_quotes": [
+        "昨夜没有睡，但身体反常地清醒",
+        "脑子能转，眼睛却又干又涩",
+        "他必须先想好怎样向同桌和班主任解释手上的纱布"
+      ]
+    },
+    {
+      "dimension": "timeline_and_causality",
+      "score": 9.0,
+      "rationale": "时间线明确且因果连贯：凌晨四点灼痛退成麻木→六点四十五分包扎穿校服→七点进教室；由发作到处理再到准备解释，顺序自洽。无前文可对照，时间粒度在正文内完全一致，扣1分因缺乏跨章节验证。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": [
+        "凌晨四点以后，凌默左手的灼痛才慢慢退成麻木",
+        "六点四十五分，他用纱布包扎左手，套上校服",
+        "七点整，他带着伤走进教室"
+      ]
+    },
+    {
+      "dimension": "world_rule_resource_and_injury",
+      "score": 8.0,
+      "rationale": "世界规则呈现为'传承热流在经脉乱窜'与'左手灼痛'，并引出'引气'风险；受伤及包扎作为可见后果合理。但规则体系刚刚显露，缺少与前文规则或后续机制的交叉验证，且author_locked只规定了前提，未锁定细节，扣2分。",
+      "prior_evidence_ids": [],
+      "state_ids": [
+        "author.project_premise"
+      ],
+      "draft_quotes": [
+        "传承留下的热流仍在经脉里乱窜",
+        "他不敢继续引气",
+        "左手的灼痛才慢慢退成麻木"
+      ]
+    },
+    {
+      "dimension": "relationship_and_open_threads",
+      "score": 8.0,
+      "rationale": "以'必须想好怎样向同桌和班主任解释'构建人际悬念，指向语文早读和数学连堂中的后续互动；这是有效的open thread。但当前只有凌默单方面预想，未发生实际关系互动，扣2分。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": [
+        "他必须先想好怎样向同桌和班主任解释手上的纱布"
+      ]
+    },
+    {
+      "dimension": "style_and_voice",
+      "score": 9.0,
+      "rationale": "语言简洁克制，以具体时间和身体感受推进叙事；'脑子能转，眼睛却又干又涩'形成清晰反差，与'人物选择'为cool point的冷静基调一致。因文本样本过短，文体辨识度尚未充分展开，扣1分。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": [
+        "脑子能转，眼睛却又干又涩"
+      ]
+    },
+    {
+      "dimension": "payoff_and_readability",
+      "score": 8.0,
+      "rationale": "required_payoff'包扎左手'被明确写出并成为进入教室的可见痕迹，ending_hook'带着伤走进教室'以resonant模式收束；早读与数学连堂制造后续学业压力。但因正文不足1000字，叙事弧较短，冲突升级有限，扣2分。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": [
+        "他用纱布包扎左手",
+        "他带着伤走进教室"
+      ]
+    }
+  ],
+  "overall_score": 8.5,
+  "blocking": false,
+  "issues": [
+    {
+      "code": "boundary.temporal",
+      "severity": "warning",
+      "dimension": "boundary_continuity",
+      "message": "待评分正文约393字，远低于章节合同target_length的2500-4000字下限。这限制了多个success criteria（冲突在单元内升级、核心创意在事件中被看见）的完成度。",
+      "draft_quote": "凌晨四点以后，凌默左手的灼痛才慢慢退成麻木。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "minimal_fix": "在保持现有时间线的前提下扩展早读前场景，例如补写凌默记录发作时间、包扎左手的具体动作，以及出门前与家人的简短互动，使正文接近2500字下限。"
+    },
+    {
+      "code": "character.knowledge_gap",
+      "severity": "warning",
+      "dimension": "character_state_and_knowledge",
+      "message": "正文直接写出'传承留下的热流仍在经脉里乱窜'，但当前state只有author.project_premise，没有正文或前文证据说明凌默已明确知道'传承'为何物；此句可能是人物认知也可能是叙述者知识，存在轻微知识边界模糊。",
+      "draft_quote": "传承留下的热流仍在经脉里乱窜",
+      "prior_evidence_ids": [],
+      "state_ids": [
+        "author.project_premise"
+      ],
+      "minimal_fix": "若该句为凌默认知，可改为'那股从图书馆古籍中涌入的热流仍在经脉里乱窜'，使知识来源在正文内可见；若为叙述者概述则无需修改。"
+    }
+  ],
+  "confidence": 0.55,
+  "scored_at": "2026-08-02T07:41:50+00:00"
+}

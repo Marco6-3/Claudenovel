@@ -1,0 +1,37 @@
+{
+  "chapter_number": 1,
+  "title": "早读之前",
+  "target_length": "2500-4000",
+  "idea_contract": {
+    "source_kind": "human",
+    "source_text": "传承让凌默整夜未眠且反常清醒；他记录身体变化、包扎左手并照常去学校",
+    "idea_locks": [
+      "昨夜没有睡，但身体反常地清醒",
+      "把每次发作的时间记在数学错题本最后一页"
+    ],
+    "forbidden_changes": [],
+    "freedom_budget": [
+      "场景顺序与转场",
+      "不改变创意锁的配角细节",
+      "叙述视角、节奏与语言表达"
+    ],
+    "success_criteria": [
+      "核心创意在事件中被看见",
+      "冲突在单元内升级并兑现",
+      "结尾完成局部叙事弧"
+    ]
+  },
+  "main_goal": "凌默在早读前处理传承反噬并维持正常高中生活",
+  "required_payoffs": [
+    "包扎左手"
+  ],
+  "forbidden_beats": [
+    "禁止用胁迫、威胁、公开羞辱、堵人制造 romance",
+    "禁止未授权新增任务、数值、被动能力或力量体系",
+    "禁止替换人类提供的核心创意、主题、反转或结局"
+  ],
+  "cool_point": "人物选择",
+  "ending_mode": "resonant",
+  "ending_hook": "带着伤走进教室",
+  "allowed_system_changes": []
+}

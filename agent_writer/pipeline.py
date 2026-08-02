@@ -12,23 +12,45 @@ from .models import (
     ChapterContract,
     CharacterConstraint,
     CharacterConstraints,
+    ContextualScorecard,
     IdeaContract,
     PrewritePlan,
     ReaderExpectationMap,
     ReviewResult,
 )
 from . import index_store
+from .author_policy import (
+    author_policy_path,
+    initialize_author_policy,
+    load_author_policy,
+    render_author_policy,
+)
+from .context_scorer import scorecard_path
 from .llm_client import build_client
+from .novel_state import (
+    build_evidence_manifest,
+    compile_chapter_context,
+    evidence_manifest_path,
+    initialize_novel_state,
+    load_novel_state,
+    mark_chapter_pending_state_sync,
+    pending_state_chapters,
+    render_context_markdown,
+    state_path,
+)
 from .quality_gate import evaluate_draft
 from .rules import render_rules_for_prompt
 from .storage import (
     chapter_id,
     copy_utf8,
+    copy_utf8_atomic,
     ensure_project,
     read_model,
     read_text,
     sha256_file,
+    sha256_text,
     write_json,
+    write_json_atomic,
     write_text,
 )
 
@@ -140,6 +162,11 @@ def init_project(
             )
         ),
     }
+    state = initialize_novel_state(root, strategy)
+    initialize_author_policy(root)
+    paths["novel_state"] = str(state_path(root))
+    paths["state_schema"] = str(root / "state" / "state_delta.schema.json")
+    paths["author_policy"] = str(author_policy_path(root))
     index_store.connect(root).close()
     return paths
 
@@ -160,6 +187,13 @@ def plan_chapter(
     ending_mode: str = "resonant",
     forbidden_beats: list[str] | None = None,
     characters: list[str] | None = None,
+    idea_source_kind: str = "human",
+    arc_id: str = "",
+    arc_beat_index: int | None = None,
+    planning_state_revision: int | None = None,
+    arc_author_locks: list[str] | None = None,
+    arc_beat_constraints: list[str] | None = None,
+    target_length: str = "2500-4000",
 ) -> dict[str, str]:
     root = ensure_project(project_root)
     strategy = read_model(_strategy_path(root), AuthorStrategy)
@@ -168,7 +202,7 @@ def plan_chapter(
     forbidden.extend(strategy.forbidden_moves)
 
     idea = IdeaContract(
-        source_kind="human",
+        source_kind=idea_source_kind,
         source_text=external_idea or goal,
         idea_locks=list(idea_locks or [*required_payoffs, ending_hook]),
         forbidden_changes=list(forbidden_changes or forbidden_beats or []),
@@ -184,6 +218,7 @@ def plan_chapter(
     contract = ChapterContract(
         chapter_number=chapter_number,
         title=title,
+        target_length=target_length,
         idea_contract=idea,
         main_goal=goal,
         required_payoffs=required_payoffs,
@@ -191,6 +226,11 @@ def plan_chapter(
         cool_point=expectation.cool_point_cycle[chapter_number % len(expectation.cool_point_cycle)],
         ending_mode=ending_mode,
         ending_hook=ending_hook,
+        arc_id=arc_id,
+        arc_beat_index=arc_beat_index,
+        planning_state_revision=planning_state_revision,
+        arc_author_locks=list(arc_author_locks or []),
+        arc_beat_constraints=list(arc_beat_constraints or []),
     )
     constraint_items = [
         CharacterConstraint(
@@ -241,11 +281,27 @@ def write_chapter_prompt(
     draft_file: Path | None = None,
 ) -> dict[str, str]:
     root = ensure_project(project_root)
+    from .rolling_arc import assert_arc_ready_for_chapter
+
+    assert_arc_ready_for_chapter(root, chapter_number)
     strategy = read_text(root / "story_bible" / "author_bible.md")
     contract = read_model(_contract_path(root, chapter_number), ChapterContract)
     constraints = read_model(_constraints_path(root, chapter_number), CharacterConstraints)
     prewrite = read_model(_prewrite_path(root, chapter_number), PrewritePlan)
     rules = render_rules_for_prompt()
+    context = compile_chapter_context(
+        root,
+        chapter_number=chapter_number,
+        relevant_entities=[item.name for item in constraints.characters],
+    )
+    if context.state_is_stale:
+        pending = pending_state_chapters(root, before_chapter=chapter_number)
+        raise ValueError(
+            "cannot compile next chapter while prior StateDelta is pending: "
+            + ", ".join(str(value) for value in pending)
+        )
+    context_markdown = render_context_markdown(context)
+    author_policy = render_author_policy(root, role="writer")
 
     prompt = (
         f"# {contract.title} 单元写作任务书\n\n"
@@ -254,14 +310,22 @@ def write_chapter_prompt(
         "创意锁不可替换、弱化或另作反转；只能在 freedom_budget 内做实现选择。\n\n"
         "## 作者设定\n\n"
         f"{strategy}\n\n"
+        "## 作者反馈策略（author_locked）\n\n"
+        f"{author_policy}\n\n"
         "## 章节合同\n\n"
         f"- 章节目标：{contract.main_goal}\n"
         f"- 必须兑现：{', '.join(contract.required_payoffs)}\n"
         f"- 爽点类型：{contract.cool_point}\n"
         f"- 结尾模式：{contract.ending_mode}\n"
         f"- 结尾要求：{contract.ending_hook}\n\n"
+        "## Arc 作者锁（语义约束，不要求逐字出现）\n\n"
+        f"{json.dumps(contract.arc_author_locks, ensure_ascii=False)}\n\n"
+        "## Arc Beat 约束（语义约束，不要求逐字出现）\n\n"
+        f"{json.dumps(contract.arc_beat_constraints, ensure_ascii=False)}\n\n"
         "## 角色边界\n\n"
         f"{constraints.model_dump_json(indent=2)}\n\n"
+        "## 动态前文上下文（权限与证据约束）\n\n"
+        f"{context_markdown}\n"
         "## Prewrite Plan\n\n"
         f"{prewrite.model_dump_json(indent=2)}\n\n"
         "## 调研规则包\n\n"
@@ -273,7 +337,11 @@ def write_chapter_prompt(
         "- 结尾最后三到五段必须完成单元局部弧并落到指定结尾要求。\n"
     )
     prompt_path = root / "prompts" / f"{chapter_id(chapter_number)}_writer_prompt.md"
-    result = {"prompt": str(write_text(prompt_path, prompt))}
+    context_path = root / "state" / "context" / f"{chapter_id(chapter_number)}_context.json"
+    result = {
+        "prompt": str(write_text(prompt_path, prompt)),
+        "context_pack": str(context_path),
+    }
     index_store.upsert_artifact(root, chapter_number, "writer_prompt", prompt_path)
     if draft_file is not None:
         imported = copy_utf8(draft_file, _draft_path(root, chapter_number))
@@ -666,6 +734,7 @@ def write_rewrite_brief(project_root: Path, *, chapter_number: int) -> Path:
     root = ensure_project(project_root)
     review = read_model(_review_path(root, chapter_number), ReviewResult)
     draft = read_text(_draft_path(root, chapter_number))
+    author_policy = render_author_policy(root, role="rewriter")
     lines = [
         f"# {chapter_id(chapter_number)} 返修 Brief",
         "",
@@ -684,6 +753,7 @@ def write_rewrite_brief(project_root: Path, *, chapter_number: int) -> Path:
     lines.extend(["", "## 返修指令", ""])
     for instruction in review.rewrite_instructions:
         lines.append(f"- {instruction}")
+    lines.extend(["", "## 作者反馈策略（author_locked）", "", author_policy])
     lines.extend(["", "## 原稿", "", draft])
     return write_text(root / "prompts" / f"{chapter_id(chapter_number)}_rewrite_brief.md", "\n".join(lines))
 
@@ -727,6 +797,14 @@ def commit_chapter(project_root: Path, *, chapter_number: int, approve: bool) ->
     if not approve:
         raise ValueError("commit requires explicit approve=True")
     root = ensure_project(project_root)
+    existing_commit_file = _commit_path(root, chapter_number)
+    if existing_commit_file.exists():
+        existing_commit = read_model(existing_commit_file, ChapterCommit)
+        if existing_commit.state_sync_status == "applied":
+            raise ValueError(
+                "cannot recommit a chapter after its StateDelta was applied; "
+                "create an explicit state correction instead"
+            )
     review = read_model(_review_path(root, chapter_number), ReviewResult)
     if review.blocking:
         raise ValueError("cannot commit a chapter with blocking review issues")
@@ -747,7 +825,42 @@ def commit_chapter(project_root: Path, *, chapter_number: int, approve: bool) ->
     if changed:
         raise ValueError(f"artifacts changed after review: {', '.join(changed)}; run review again")
 
-    accepted = copy_utf8(_draft_path(root, chapter_number), _accepted_path(root, chapter_number))
+    from .rolling_arc import assert_unit_length_allows_commit
+
+    assert_unit_length_allows_commit(root, chapter_number, _draft_path(root, chapter_number))
+
+    contextual_score_file = scorecard_path(root, chapter_number)
+    contextual_score: ContextualScorecard | None = None
+    if contextual_score_file.exists():
+        contextual_score = read_model(contextual_score_file, ContextualScorecard)
+        if contextual_score.draft_sha256 != current_hashes["draft"]:
+            raise ValueError("draft changed after contextual scoring; run contextual score again")
+        if contextual_score.state_revision != load_novel_state(root).revision:
+            raise ValueError("NovelState changed after contextual scoring; run contextual score again")
+        current_context = compile_chapter_context(root, chapter_number=chapter_number)
+        if contextual_score.context_sha256 != sha256_text(current_context.model_dump_json()):
+            raise ValueError("prior context changed after contextual scoring; run contextual score again")
+        current_policy = load_author_policy(root)
+        current_policy_hash = sha256_file(author_policy_path(root))
+        if (
+            contextual_score.author_policy_revision != current_policy.revision
+            or contextual_score.author_policy_sha256 != current_policy_hash
+        ):
+            raise ValueError("author policy changed after contextual scoring; run contextual score again")
+        if contextual_score.blocking:
+            raise ValueError("cannot commit a chapter with blocking contextual score issues")
+
+    accepted = copy_utf8_atomic(_draft_path(root, chapter_number), _accepted_path(root, chapter_number))
+    manifest = build_evidence_manifest(
+        root,
+        chapter_number=chapter_number,
+        accepted_file=accepted,
+    )
+    mark_chapter_pending_state_sync(
+        root,
+        chapter_number=chapter_number,
+        manifest=manifest,
+    )
     commit = ChapterCommit(
         chapter_number=chapter_number,
         status="accepted",
@@ -759,9 +872,16 @@ def commit_chapter(project_root: Path, *, chapter_number: int, approve: bool) ->
             "accepted": sha256_file(accepted),
             "review": sha256_file(_review_path(root, chapter_number)),
         },
+        evidence_manifest_file=str(evidence_manifest_path(root, chapter_number)),
+        state_sync_status="pending_extraction",
+        contextual_score_file=str(contextual_score_file) if contextual_score else "",
+        contextual_score=contextual_score.overall_score if contextual_score else None,
     )
-    commit_path = write_json(_commit_path(root, chapter_number), commit)
+    commit_path = write_json_atomic(_commit_path(root, chapter_number), commit)
     index_store.save_commit(root, commit, commit_path)
+    from .rolling_arc import mark_arc_chapter_accepted
+
+    mark_arc_chapter_accepted(root, chapter_number)
     return commit
 
 
@@ -771,6 +891,8 @@ def status_report(project_root: Path) -> dict[str, object]:
     drafts = sorted(root.glob("drafts/*_draft.md"))
     reviews = sorted(root.glob("reviews/*_review.json"))
     accepted = sorted(root.glob("accepted/chapter_*.md"))
+    state = load_novel_state(root)
+    from .rolling_arc import arc_status
     return {
         "project_root": str(root),
         "contracts": len(contracts),
@@ -780,6 +902,10 @@ def status_report(project_root: Path) -> dict[str, object]:
         "latest_contract": contracts[-1].name if contracts else "",
         "latest_accepted": accepted[-1].name if accepted else "",
         "blocking_issues": len(index_store.blocking_issues(root)),
+        "state_revision": state.revision,
+        "state_synced_through_chapter": state.latest_state_synced_chapter,
+        "pending_state_chapters": pending_state_chapters(root),
+        "unit": arc_status(root),
         "index_db": str(index_store.index_path(root)),
     }
 
