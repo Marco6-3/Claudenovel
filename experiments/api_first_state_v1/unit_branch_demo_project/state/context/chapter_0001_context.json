@@ -1,0 +1,37 @@
+{
+  "schema_version": "chapter-context/v1",
+  "chapter_number": 1,
+  "state_revision": 0,
+  "state_synced_through_chapter": 0,
+  "state_is_stale": false,
+  "recent_chapters": [],
+  "selected_state": [
+    {
+      "layer": "authority_layer",
+      "record": {
+        "state_id": "author.project_premise",
+        "subject": "练气仙诀_单元分支隔离演示",
+        "claim": "项目核心前提",
+        "value": "高三学生凌默因频繁去图书馆接触传承，并在学习生活中面对异常清醒、左手热流和身体变化。",
+        "authority": "author_locked",
+        "status": "active",
+        "confidence": 1.0,
+        "evidence_refs": [],
+        "introduced_chapter": 0,
+        "updated_chapter": 0,
+        "tags": [
+          "project",
+          "premise"
+        ],
+        "author_note": "项目初始化时由作者输入，模型不得覆盖。",
+        "supersedes": []
+      },
+      "selection_reason": "author_locked"
+    }
+  ],
+  "omitted_model_proposals": 0,
+  "requested_entities": [],
+  "requested_threads": [],
+  "approximate_chars": 411,
+  "budget_chars": 24000
+}

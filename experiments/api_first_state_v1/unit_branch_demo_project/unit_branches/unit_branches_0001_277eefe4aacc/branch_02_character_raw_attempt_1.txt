@@ -1,0 +1,66 @@
+{
+  "unit_title": "异常日志与图书馆关联",
+  "approach_summary": "凌默通过建立异常日志和控制变量方法，记录身体变化与图书馆接触频率的关联，同时承受现实学习与人际关系的代价。",
+  "distinctive_choice": "不依赖超自然解释，而是用科学观察和记录来推进调查，强调身体变化对高三生活的具体干扰。",
+  "fingerprint": {
+    "conflict_space": "高三教室、图书馆、家庭卧室",
+    "trigger": "凌默发现左手热流频率与图书馆借阅次数同步增加",
+    "core_mechanism": "控制变量记录：固定其他生活因素，仅改变图书馆接触频率，观察身体反应",
+    "climax_action": "凌默在图书馆闭馆前整理两周记录，确认热流与借阅次数的正相关，并决定减少去图书馆以验证因果",
+    "cost_type": "学习时间减少、同学误解、睡眠不足加剧",
+    "end_hook": "记录显示热流峰值出现在借阅特定书架书籍后，但书架区域尚未完全探索"
+  },
+  "beats": [
+    {
+      "chapter_number": 1,
+      "title": "异常初现",
+      "goal": "建立异常日志并记录首次身体变化与图书馆接触的关联",
+      "required_payoffs": ["建立异常日志", "确认图书馆关联"],
+      "acceptance_criteria": [
+        "凌默在笔记本上记录日期、时间、身体症状（热流、清醒度）、前一天图书馆访问时长",
+        "发现连续三天去图书馆后，左手热流频率增加",
+        "课堂打瞌睡被老师点名，显示学习受影响"
+      ],
+      "ending_hook": "日志显示热流与图书馆访问存在初步同步，但未排除其他变量",
+      "focus_entities": ["凌默"],
+      "relevant_threads": ["author.project_premise"],
+      "must_preserve": ["凌默处于高三学习阶段", "异常清醒和左手热流持续存在"],
+      "risk_checks": ["避免恐怖意象，保持现实校园描写"],
+      "target_chars": 3000
+    },
+    {
+      "chapter_number": 2,
+      "title": "控制变量",
+      "goal": "设计并实施控制变量方法，排除睡眠不足等干扰因素",
+      "required_payoffs": ["建立异常日志"],
+      "acceptance_criteria": [
+        "凌默固定睡眠时间、饮食和运动，仅改变图书馆访问频率",
+        "记录一周数据，发现热流与图书馆访问时长正相关",
+        "因记录日志熬夜，导致第二天数学测验失误"
+      ],
+      "ending_hook": "数据初步支持图书馆关联，但同学开始询问他为何频繁去图书馆",
+      "focus_entities": ["凌默", "同学"],
+      "relevant_threads": ["author.project_premise"],
+      "must_preserve": ["现实学习或人际关系为调查付出明确代价"],
+      "risk_checks": ["避免突然爆种，保持谨慎观察"],
+      "target_chars": 3000
+    },
+    {
+      "chapter_number": 3,
+      "title": "代价升级",
+      "goal": "现实代价显著升级，凌默面临选择：继续调查还是回归正常学习",
+      "required_payoffs": ["现实代价升级"],
+      "acceptance_criteria": [
+        "凌默因睡眠不足在模拟考中成绩下滑，被班主任约谈",
+        "母亲发现他深夜写日志，产生误解",
+        "凌默决定减少图书馆访问，以验证因果"
+      ],
+      "ending_hook": "减少访问后热流频率下降，但图书馆借阅记录显示特定书架区域未被探索",
+      "focus_entities": ["凌默", "班主任", "母亲"],
+      "relevant_threads": ["author.project_premise"],
+      "must_preserve": ["图书馆关联必须由可回看行为和记录建立"],
+      "risk_checks": ["不得一次解释全部传承真相"],
+      "target_chars": 3000
+    }
+  ]
+}

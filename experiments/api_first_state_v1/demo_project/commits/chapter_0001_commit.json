@@ -1,0 +1,21 @@
+{
+  "chapter_number": 1,
+  "status": "accepted",
+  "accepted_at": "2026-08-02T07:42:05+00:00",
+  "accepted_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\accepted\\chapter_0001.md",
+  "review_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\reviews\\chapter_0001_review.json",
+  "contract_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\chapter_contracts\\chapter_0001_contract.json",
+  "artifact_hashes": {
+    "draft": "0b8b739f2cea064bb92ec77d0cfb3266f60b5d319df7232de16d7365adcfc9a9",
+    "contract": "b1a1969ddac7ec05ea7ca06ff309c7d8e067b5a507e264b77afa2b3dea59916b",
+    "constraints": "e16cd7cc3cfaf433e116d04b115f230cfdeee64ba0ab39371c1465456a57e3cb",
+    "accepted": "0b8b739f2cea064bb92ec77d0cfb3266f60b5d319df7232de16d7365adcfc9a9",
+    "review": "b23e74fece6cdd65a5f8bb039d0cfc941d863cae3dca26efb54a30d23c946ec2"
+  },
+  "evidence_manifest_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\state\\evidence\\chapter_0001_evidence.json",
+  "state_sync_status": "applied",
+  "state_delta_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\state\\deltas\\chapter_0001_applied.json",
+  "state_revision": 1,
+  "contextual_score_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\reviews\\chapter_0001_contextual_score.json",
+  "contextual_score": 8.5
+}

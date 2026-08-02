@@ -55,7 +55,9 @@ def test_init_and_plan_write_utf8_contract_files(tmp_path: Path) -> None:
     assert contract["idea_contract"]["source_kind"] == "human"
     assert contract["idea_contract"]["source_text"].startswith("第三声铃只在无人旧楼响起")
     assert contract["idea_contract"]["idea_locks"] == ["找到染血校牌", "校牌背面出现主角的名字"]
-    assert not (root / "state").exists()
+    state = json.loads((root / "state" / "novel_state_v1.json").read_text(encoding="utf-8"))
+    assert state["schema_version"] == "novel-state/v1"
+    assert state["authority_layer"]["author_locks"][0]["authority"] == "author_locked"
 
 
 def test_write_prompt_imports_draft_by_file_path(tmp_path: Path) -> None:
@@ -75,7 +77,7 @@ def test_write_prompt_imports_draft_by_file_path(tmp_path: Path) -> None:
     )
 
 
-def test_writer_prompt_does_not_import_long_term_history(tmp_path: Path) -> None:
+def test_writer_prompt_imports_recent_past_but_not_future_history(tmp_path: Path) -> None:
     root = _init(tmp_path)
     plan_chapter(
         root,
@@ -93,10 +95,10 @@ def test_writer_prompt_does_not_import_long_term_history(tmp_path: Path) -> None
     result = write_chapter_prompt(root, chapter_number=2)
     prompt = Path(result["prompt"]).read_text(encoding="utf-8")
 
-    assert "第一章已批准内容与尾钩" not in prompt
+    assert "第一章已批准内容与尾钩" in prompt
     assert "第三章未来内容不得泄露" not in prompt
     assert "档案室每天多出一把无人承认的椅子" in prompt
-    assert "context_pack" not in result
+    assert Path(result["context_pack"]).exists()
 
 
 def test_generate_draft_uses_configured_llm_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -399,6 +401,29 @@ def test_review_accepts_light_chinese_payoff_variation(tmp_path: Path) -> None:
     assert review.blocking is False
 
 
+def test_review_accepts_common_synonym_inside_idea_lock(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    plan_chapter(
+        root,
+        chapter_number=2,
+        title="清醒消退",
+        goal="凌默发现传承带来的清醒开始消退",
+        external_idea="凌默的异常清醒正在消退。",
+        idea_locks=["异常清醒正在消退"],
+        required_payoffs=["第一次感到困意"],
+        ending_hook="纱布下再次发热",
+    )
+    draft = root / "drafts" / "chapter_0002_draft.md"
+    draft.write_text(
+        "昨夜那种反常的清醒正在消退，他第一次感到困意。\n\n纱布下再次发热。",
+        encoding="utf-8",
+    )
+
+    review = review_chapter(root, chapter_number=2)
+
+    assert review.blocking is False
+
+
 def test_review_accepts_semantic_payoff_and_hook_variation(tmp_path: Path) -> None:
     root = _init(tmp_path)
     draft = root / "drafts" / "chapter_0001_draft.md"
@@ -428,6 +453,20 @@ def test_review_accepts_concrete_name_reveal_and_self_directed_force(tmp_path: P
     assert review.blocking is False
     assert "coercive_romance" not in {issue.code for issue in review.issues}
     assert "weak_or_missing_ending_hook" not in {issue.code for issue in review.issues}
+
+
+def test_review_does_not_misclassify_action_threat_as_romance(tmp_path: Path) -> None:
+    root = _init(tmp_path)
+    draft = root / "drafts" / "chapter_0001_draft.md"
+    draft.write_text(
+        "水鬼威胁整座旧码头，陈默逼迫它现出阵眼，随后找到染血校牌。\n\n"
+        "校牌背面出现主角的名字。",
+        encoding="utf-8",
+    )
+
+    review = review_chapter(root, chapter_number=1)
+
+    assert "coercive_romance" not in {issue.code for issue in review.issues}
 
 
 def test_rewrite_brief_preserves_blocking_instructions(tmp_path: Path) -> None:
@@ -483,7 +522,9 @@ def test_commit_requires_human_approval_and_clean_review(tmp_path: Path) -> None
     assert commit.status == "accepted"
     assert (root / "accepted" / "chapter_0001.md").exists()
     assert "state_updates" not in commit.model_dump()
-    assert not (root / "state").exists()
+    assert commit.state_sync_status == "pending_extraction"
+    assert Path(commit.evidence_manifest_file).exists()
+    assert status_report(root)["pending_state_chapters"] == [1]
     assert status_report(root)["accepted"] == 1
     report = index_report(root)
     artifact_types = {item["artifact_type"] for item in report["artifacts"]}
@@ -542,6 +583,8 @@ def test_llm_config_loads_project_env_without_exposing_secret(tmp_path: Path, mo
     assert config.chat_url == "https://api.example.test/v1/chat/completions"
     assert config.model == "test-model"
     assert config.api_key == "secret-value"
+    assert config.thinking == "omit"
+    assert config.response_format == "text"
 
 
 def test_judge_config_can_override_model_and_reuse_shared_endpoint(
@@ -570,3 +613,33 @@ def test_judge_config_can_override_model_and_reuse_shared_endpoint(
     assert config.model == "judge-model"
     assert config.base_url == "https://api.example.test/v1"
     assert config.api_key == "shared-secret"
+    assert config.thinking == "omit"
+    assert config.response_format == "json_object"
+
+
+def test_deepseek_structured_role_explicitly_disables_default_thinking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for name in (
+        "SCORER_BASE_URL",
+        "SCORER_MODEL",
+        "SCORER_API_KEY",
+        "LLM_BASE_URL",
+        "LLM_MODEL",
+        "LLM_API_KEY",
+        "LLM_THINKING",
+        "LLM_RESPONSE_FORMAT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    (tmp_path / ".env").write_text(
+        "LLM_BASE_URL=https://api.deepseek.com\n"
+        "LLM_MODEL=deepseek-v4-flash\n"
+        "LLM_API_KEY=shared-secret\n",
+        encoding="utf-8",
+    )
+
+    config = LLMConfig.from_env(tmp_path, role="SCORER")
+
+    assert config.thinking == "disabled"
+    assert config.response_format == "json_object"

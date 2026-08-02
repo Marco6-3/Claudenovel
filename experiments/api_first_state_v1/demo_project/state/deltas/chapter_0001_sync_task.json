@@ -1,0 +1,10 @@
+{
+  "schema_version": "state-sync-task/v1",
+  "chapter_number": 1,
+  "status": "applied",
+  "accepted_sha256": "0b8b739f2cea064bb92ec77d0cfb3266f60b5d319df7232de16d7365adcfc9a9",
+  "evidence_manifest_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\state\\evidence\\chapter_0001_evidence.json",
+  "candidate_delta_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\state\\deltas\\chapter_0001_candidate.json",
+  "applied_delta_file": "C:\\Users\\mingzhe Liu\\OneDrive\\Desktop\\Claudenovel\\experiments\\api_first_state_v1\\demo_project\\state\\deltas\\chapter_0001_applied.json",
+  "updated_at": "2026-08-02T07:44:46+00:00"
+}

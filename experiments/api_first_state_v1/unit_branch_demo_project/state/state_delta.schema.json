@@ -1,0 +1,328 @@
+{
+  "$defs": {
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "chapter_number": {
+          "minimum": 1,
+          "title": "Chapter Number",
+          "type": "integer"
+        },
+        "paragraph_index": {
+          "minimum": 1,
+          "title": "Paragraph Index",
+          "type": "integer"
+        },
+        "paragraph_sha256": {
+          "title": "Paragraph Sha256",
+          "type": "string"
+        },
+        "quote": {
+          "default": "",
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "chapter_number",
+        "paragraph_index",
+        "paragraph_sha256"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "StateAddition": {
+      "additionalProperties": false,
+      "properties": {
+        "layer": {
+          "enum": [
+            "canon_facts",
+            "timeline",
+            "entity_states",
+            "character_beliefs",
+            "relationship_arcs",
+            "open_threads",
+            "style_memory",
+            "authority_layer"
+          ],
+          "title": "Layer",
+          "type": "string"
+        },
+        "record": {
+          "$ref": "#/$defs/StateRecord"
+        }
+      },
+      "required": [
+        "layer",
+        "record"
+      ],
+      "title": "StateAddition",
+      "type": "object"
+    },
+    "StateRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "state_id": {
+          "title": "State Id",
+          "type": "string"
+        },
+        "subject": {
+          "title": "Subject",
+          "type": "string"
+        },
+        "claim": {
+          "title": "Claim",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "authority": {
+          "enum": [
+            "author_locked",
+            "text_confirmed",
+            "model_inferred",
+            "model_proposed"
+          ],
+          "title": "Authority",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "resolved",
+            "superseded"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "confidence": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "introduced_chapter": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Introduced Chapter",
+          "type": "integer"
+        },
+        "updated_chapter": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Updated Chapter",
+          "type": "integer"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "author_note": {
+          "default": "",
+          "title": "Author Note",
+          "type": "string"
+        },
+        "supersedes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supersedes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "state_id",
+        "subject",
+        "claim",
+        "authority"
+      ],
+      "title": "StateRecord",
+      "type": "object"
+    },
+    "StateReplacement": {
+      "additionalProperties": false,
+      "properties": {
+        "layer": {
+          "enum": [
+            "canon_facts",
+            "timeline",
+            "entity_states",
+            "character_beliefs",
+            "relationship_arcs",
+            "open_threads",
+            "style_memory",
+            "authority_layer"
+          ],
+          "title": "Layer",
+          "type": "string"
+        },
+        "target_state_id": {
+          "title": "Target State Id",
+          "type": "string"
+        },
+        "replacement": {
+          "$ref": "#/$defs/StateRecord"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "layer",
+        "target_state_id",
+        "replacement",
+        "reason"
+      ],
+      "title": "StateReplacement",
+      "type": "object"
+    },
+    "StateResolution": {
+      "additionalProperties": false,
+      "properties": {
+        "layer": {
+          "enum": [
+            "canon_facts",
+            "timeline",
+            "entity_states",
+            "character_beliefs",
+            "relationship_arcs",
+            "open_threads",
+            "style_memory",
+            "authority_layer"
+          ],
+          "title": "Layer",
+          "type": "string"
+        },
+        "target_state_id": {
+          "title": "Target State Id",
+          "type": "string"
+        },
+        "authority": {
+          "enum": [
+            "author_locked",
+            "text_confirmed",
+            "model_inferred",
+            "model_proposed"
+          ],
+          "title": "Authority",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "layer",
+        "target_state_id",
+        "authority",
+        "reason"
+      ],
+      "title": "StateResolution",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "state-delta/v1",
+      "default": "state-delta/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "delta_id": {
+      "title": "Delta Id",
+      "type": "string"
+    },
+    "chapter_number": {
+      "minimum": 1,
+      "title": "Chapter Number",
+      "type": "integer"
+    },
+    "accepted_sha256": {
+      "title": "Accepted Sha256",
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "model",
+        "manual"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "model": {
+      "default": "",
+      "title": "Model",
+      "type": "string"
+    },
+    "additions": {
+      "items": {
+        "$ref": "#/$defs/StateAddition"
+      },
+      "title": "Additions",
+      "type": "array"
+    },
+    "replacements": {
+      "items": {
+        "$ref": "#/$defs/StateReplacement"
+      },
+      "title": "Replacements",
+      "type": "array"
+    },
+    "resolutions": {
+      "items": {
+        "$ref": "#/$defs/StateResolution"
+      },
+      "title": "Resolutions",
+      "type": "array"
+    },
+    "change_summary": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Change Summary",
+      "type": "array"
+    },
+    "extracted_at": {
+      "title": "Extracted At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "delta_id",
+    "chapter_number",
+    "accepted_sha256",
+    "source"
+  ],
+  "title": "StateDelta",
+  "type": "object"
+}

@@ -1,0 +1,91 @@
+{
+  "dimensions": [
+    {
+      "dimension": "contract_fidelity",
+      "score": 9,
+      "rationale": "本章完成合同要求的早读与数学连堂应对询问、首次课上记录身体异常并建立初步日志习惯；解释未引入新超自然设定；错题本继续作为日志载体；左手纱布未取下。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P001", "novel-5b4f5b9dd99f:CH0001-P002", "novel-5b4f5b9dd99f:CH0001-P003"],
+      "state_ids": ["entity.lingmo.inherited_heat_state", "entity.lingmo.left_hand_bandaged", "open.lingmo.explain_bandage"],
+      "draft_quotes": ["“你这手怎么回事，包得跟粽子似的。”", "“昨晚倒开水，没拿稳，烫了一下。”", "他握紧笔，在下面补了两行，笔尖压得很低，几乎贴着装订线：", "“早读7:35 左手灼痛，眼花数秒。疑似：久坐未动？", "数学8:20 被点名，指节僵，眼花。答毕缓解。疑似：精神集中？”"]
+    },
+    {
+      "dimension": "boundary_continuity",
+      "score": 8,
+      "rationale": "开头承接上一章七点整走进教室，未跳过时间；睡眠债、伤势、纱布状态延续；但未明确提及凌晨四点后的具体时间点，且结尾走廊恐怖意象与作者反馈策略冲突。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P002", "novel-5b4f5b9dd99f:CH0001-P003"],
+      "state_ids": ["entity.lingmo.left_hand_bandaged", "entity.lingmo.inherited_heat_state"],
+      "draft_quotes": ["七点一刻，教室里的座位填了大半。", "走廊黑了一瞬，声控灯在他走到一半时亮起来，白色光照出墙上拉长的影子。"]
+    },
+    {
+      "dimension": "character_state_and_knowledge",
+      "score": 9,
+      "rationale": "凌默保持清醒但眼睛干涩、左手灼痛等状态；知识未超范围；对自身状况的认知从记录时间升级为控制变量，符合角色成长。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P002"],
+      "state_ids": ["entity.lingmo.inherited_heat_state", "entity.lingmo.left_hand_bandaged"],
+      "draft_quotes": ["脑子在这一刻清楚得过分。他甚至记得昨天赵老师在同一道题上反复强调过的两个易错点。", "一个整夜没睡的人，白天一滴觉都不补，还能一整天清醒地做题——这比困本身更可疑。"]
+    },
+    {
+      "dimension": "timeline_and_causality",
+      "score": 9,
+      "rationale": "时间线清晰：早读、数学课、午间、下午、晚自习；发作间隔缩短的因果链明确；但未明确凌晨四点后的具体时间点，略有模糊。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P001"],
+      "state_ids": ["entity.lingmo.inherited_heat_state"],
+      "draft_quotes": ["凌晨：一点半——两点五十——四点十分，间隔都在八十分钟上下。白天：七点三十五——八点二十，间隔四十五分钟。"]
+    },
+    {
+      "dimension": "world_rule_resource_and_injury",
+      "score": 8,
+      "rationale": "伤势、睡眠债、热流等状态延续，未引入新超自然规则；但结尾红纹暗示新现象，未明确是否属于已有规则，需谨慎。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P001"],
+      "state_ids": ["entity.lingmo.inherited_heat_state", "entity.lingmo.left_hand_bandaged"],
+      "draft_quotes": ["皮肤底下透出几道淡红色的纹路，从腕骨弯弯绕绕伸向指根，像有什么东西沿着一条看不见的路线走了一遍。"]
+    },
+    {
+      "dimension": "relationship_and_open_threads",
+      "score": 9,
+      "rationale": "同桌周航和班主任赵老师的询问得到合理解释，且解释未被拆穿；周航主动帮忙带饭，关系自然；未引入新开放线程。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P003"],
+      "state_ids": ["open.lingmo.explain_bandage"],
+      "draft_quotes": ["“你这手怎么回事，包得跟粽子似的。”", "“昨晚倒开水，没拿稳，烫了一下。”", "“那你午饭怎么办？我帮你带两天。”"]
+    },
+    {
+      "dimension": "style_and_voice",
+      "score": 7,
+      "rationale": "整体风格符合校园现实，但结尾走廊恐怖意象与作者反馈策略冲突，且部分比喻（如“声音像浸了水”）可能稍显刻意。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "draft_quotes": ["走廊黑了一瞬，声控灯在他走到一半时亮起来，白色光照出墙上拉长的影子。", "声音像浸了水，湿漉漉地贴在墙上。"]
+    },
+    {
+      "dimension": "payoff_and_readability",
+      "score": 9,
+      "rationale": "完成所有 required_payoffs：解释、注意力波动、日志记录、睡眠债代价；结尾红纹和间隔缩短提供强钩子，可读性强。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P001"],
+      "state_ids": ["entity.lingmo.inherited_heat_state"],
+      "draft_quotes": ["不到半天，间隔几乎短了一半。", "皮肤底下透出几道淡红色的纹路，从腕骨弯弯绕绕伸向指根，像有什么东西沿着一条看不见的路线走了一遍。"]
+    }
+  ],
+  "issues": [
+    {
+      "code": "boundary.temporal",
+      "severity": "warning",
+      "dimension": "boundary_continuity",
+      "message": "章节开头未明确提及凌晨四点后的具体时间点，但七点一刻与上一章七点整衔接自然，可接受。",
+      "draft_quote": "七点一刻，教室里的座位填了大半。",
+      "prior_evidence_ids": ["novel-5b4f5b9dd99f:CH0001-P003"],
+      "state_ids": [],
+      "minimal_fix": "可添加一句如“七点一刻”明确时间，但非必须。"
+    },
+    {
+      "code": "style.horror_drift",
+      "severity": "risk",
+      "dimension": "style_and_voice",
+      "message": "结尾走廊恐怖意象（声控灯、拉长影子）与作者反馈策略 tone.avoid_horror_drift 冲突，应改为身体变化或现实代价的增量。",
+      "draft_quote": "走廊黑了一瞬，声控灯在他走到一半时亮起来，白色光照出墙上拉长的影子。",
+      "prior_evidence_ids": [],
+      "state_ids": [],
+      "minimal_fix": "删除或替换为身体症状相关描写，如“他低头看了一眼纱布，指节又僵了一下。”"
+    }
+  ],
+  "confidence": 0.9
+}
