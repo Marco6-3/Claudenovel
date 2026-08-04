@@ -145,6 +145,9 @@ def _allowed_context_refs(context: CompiledChapterContext) -> tuple[set[str], se
             for paragraph in evidence:
                 if isinstance(paragraph, dict) and paragraph.get("evidence_id"):
                     evidence_ids.add(str(paragraph["evidence_id"]))
+    for paragraph in context.remote_evidence:
+        if isinstance(paragraph, dict) and paragraph.get("evidence_id"):
+            evidence_ids.add(str(paragraph["evidence_id"]))
     for selection in context.selected_state:
         state_ids.add(selection.record.state_id)
         evidence_ids.update(ref.evidence_id for ref in selection.record.evidence_refs)

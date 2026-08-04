@@ -54,7 +54,15 @@ class LLMConfig:
         timeout_raw = first_env(*timeout_names, default="120")
         default_thinking = "disabled" if "deepseek.com" in base_url.lower() else "omit"
         thinking = first_env(*thinking_names, default=default_thinking).strip().lower()
-        structured_roles = {"STATE", "SCORER", "PLANNER", "JUDGE"}
+        structured_roles = {
+            "STATE",
+            "SCORER",
+            "PLANNER",
+            "JUDGE",
+            "BENCHMARK",
+            "UNIT_SCORER",
+            "EVIDENCE_GRAPH",
+        }
         default_response_format = "json_object" if role_prefix in structured_roles else "text"
         response_format = first_env(
             *response_format_names,

@@ -1,0 +1,16 @@
+{
+  "schema_version": "existing-novel-import/v1",
+  "project_name": "示例小说",
+  "genre": "校园修仙",
+  "premise": "填写作者确认的核心前提",
+  "target_reader": "填写目标读者",
+  "source_root": "C:\\path\\to\\novel\\章节内容",
+  "chapter_glob": "*.txt",
+  "chapter_filename_regex": "第\\s*(\\d+)\\s*章",
+  "expected_first_chapter": 1,
+  "expected_last_chapter": 72,
+  "author_policy_file": "C:\\path\\to\\author_policy.json",
+  "author_bible_text_files": [],
+  "high_risk_chapters": [1, 2, 3, 31, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 72],
+  "private_project": true
+}

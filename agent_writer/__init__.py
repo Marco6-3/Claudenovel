@@ -38,6 +38,17 @@ from .unit_branch import (
     load_unit_branch_set,
     select_unit_branch,
 )
+from .benchmark_v2 import evaluate_benchmark, run_benchmark_with_api
+from .author_materials import (
+    AuthorMaterialRecord,
+    AuthorMaterialRegistry,
+    extract_docx_markdown,
+    import_author_materials,
+    render_selected_author_materials,
+)
+from .evidence_graph import set_context_retrieval_policy
+from .unit_completion import score_unit_completion
+from .onboarding import bootstrap_existing_state, onboard_existing_novel
 
 __all__ = [
     "commit_chapter",
@@ -68,4 +79,15 @@ __all__ = [
     "load_unit_branch_set",
     "select_unit_branch",
     "audit_unit_branch_diversity",
+    "evaluate_benchmark",
+    "run_benchmark_with_api",
+    "AuthorMaterialRecord",
+    "AuthorMaterialRegistry",
+    "extract_docx_markdown",
+    "import_author_materials",
+    "render_selected_author_materials",
+    "set_context_retrieval_policy",
+    "score_unit_completion",
+    "onboard_existing_novel",
+    "bootstrap_existing_state",
 ]

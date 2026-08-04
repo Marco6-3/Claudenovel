@@ -399,7 +399,10 @@ class CompiledChapterContext(StrictModel):
     state_synced_through_chapter: int = Field(ge=0)
     state_is_stale: bool
     recent_chapters: list[dict[str, object]] = Field(default_factory=list)
+    remote_evidence: list[dict[str, object]] = Field(default_factory=list)
     selected_state: list[ContextSelection] = Field(default_factory=list)
+    retrieval_mode: Literal["state_only", "evidence_graph"] = "state_only"
+    retrieval_trace: list[str] = Field(default_factory=list)
     omitted_model_proposals: int = Field(default=0, ge=0)
     requested_entities: list[str] = Field(default_factory=list)
     requested_threads: list[str] = Field(default_factory=list)
@@ -525,6 +528,7 @@ class ArcContract(StrictModel):
     unit_title: str = ""
     objective: str
     author_intent: str
+    source_material_ids: list[str] = Field(default_factory=list)
     entry_state: list[str] = Field(default_factory=list)
     target_end_state: list[str] = Field(default_factory=list)
     unit_payoffs: list[str] = Field(default_factory=list)
@@ -633,6 +637,7 @@ class UnitBranchSet(StrictModel):
     target_total_chars: int = Field(default=20000, ge=1000, le=20000)
     objective: str
     author_intent: str
+    source_material_ids: list[str] = Field(default_factory=list)
     freedom_axes: list[
         Literal[
             "conflict_space",

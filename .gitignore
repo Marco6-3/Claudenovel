@@ -4,6 +4,9 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+.local_projects/
+/benchmarks/**/runs/
+/benchmarks/**/private/
 .env
 .env.*
 *.pyc

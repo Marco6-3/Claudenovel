@@ -25,6 +25,11 @@ from .pipeline import (
 )
 from .llm_client import build_client
 from .context_scorer import score_draft_with_context
+from .benchmark_v2 import evaluate_benchmark, run_benchmark_with_api
+from .author_materials import import_author_materials
+from .evidence_graph import set_context_retrieval_policy
+from .unit_completion import score_unit_completion
+from .onboarding import bootstrap_existing_state, onboard_existing_novel
 from .novel_state import (
     apply_state_delta,
     compile_chapter_context,
@@ -104,6 +109,30 @@ def build_parser() -> argparse.ArgumentParser:
     context.add_argument("--thread", action="append", default=[])
     context.add_argument("--recent-chapters", type=int, default=3)
     context.add_argument("--max-chars", type=int, default=24000)
+    context.add_argument(
+        "--retrieval-mode",
+        choices=["state_only", "evidence_graph"],
+        help="override the project retrieval policy for this context build",
+    )
+
+    context_policy = sub.add_parser(
+        "context-policy-set",
+        help="persist the project context retrieval feature flag",
+    )
+    context_policy.add_argument(
+        "--mode",
+        required=True,
+        choices=["state_only", "evidence_graph"],
+    )
+    context_policy.add_argument("--graph-hops", type=int, default=2)
+    context_policy.add_argument("--max-remote-evidence", type=int, default=8)
+    context_policy.add_argument("--max-graph-state", type=int, default=20)
+    context_policy.add_argument(
+        "--llm-rerank",
+        action="store_true",
+        help="use the configured API to reject lexical-only historical matches",
+    )
+    context_policy.add_argument("--rerank-candidate-limit", type=int, default=24)
 
     score = sub.add_parser("score", help="score one draft against contract and prior NovelState")
     score.add_argument("--chapter", type=int, required=True)
@@ -116,6 +145,11 @@ def build_parser() -> argparse.ArgumentParser:
     extract_state.add_argument("--temperature", type=float, default=0.0)
     extract_state.add_argument("--max-tokens", type=int, default=6000)
     extract_state.add_argument("--apply", action="store_true")
+    extract_state.add_argument(
+        "--completeness-audit",
+        action="store_true",
+        help="run a second omission-only StateDelta audit before optional apply",
+    )
 
     apply_state = sub.add_parser("apply-state", help="verify and apply a manual/candidate StateDelta JSON")
     apply_state.add_argument("--delta-file", required=True)
@@ -162,6 +196,12 @@ def build_parser() -> argparse.ArgumentParser:
     unit_branches.add_argument("--target-total-chars", type=int, default=20000)
     unit_branches.add_argument("--objective", required=True)
     unit_branches.add_argument("--author-intent", required=True)
+    unit_branches.add_argument(
+        "--material-id",
+        action="append",
+        default=[],
+        help="explicitly select one registered author material for this unit",
+    )
     unit_branches.add_argument(
         "--freedom-axis",
         action="append",
@@ -213,6 +253,12 @@ def build_parser() -> argparse.ArgumentParser:
     arc_plan.add_argument("--unit-title", default="")
     arc_plan.add_argument("--objective", required=True)
     arc_plan.add_argument("--author-intent", required=True)
+    arc_plan.add_argument(
+        "--material-id",
+        action="append",
+        default=[],
+        help="explicitly select one registered author material for this unit",
+    )
     arc_plan.add_argument("--entry-state", action="append", default=[])
     arc_plan.add_argument("--target-end-state", action="append", default=[])
     arc_plan.add_argument("--unit-payoff", action="append", default=[])
@@ -244,6 +290,13 @@ def build_parser() -> argparse.ArgumentParser:
         aliases=["unit-review"],
         help="run local structural review on the current unit plan",
     )
+    unit_completion = sub.add_parser(
+        "unit-completion-score",
+        help="independently verify whether an accepted unit met every author criterion",
+    )
+    unit_completion.add_argument("--arc-id")
+    unit_completion.add_argument("--temperature", type=float, default=0.0)
+    unit_completion.add_argument("--max-tokens", type=int, default=6000)
 
     generate = sub.add_parser("generate", help="call configured LLM and save draft")
     generate.add_argument("--chapter", type=int, required=True)
@@ -268,6 +321,65 @@ def build_parser() -> argparse.ArgumentParser:
     index.add_argument("--limit", type=int, default=20)
 
     sub.add_parser("status", help="show project status")
+
+    benchmark_run = sub.add_parser(
+        "benchmark-run",
+        help="run evidence-validated Novel Benchmark v2 cases with the configured API",
+    )
+    benchmark_run.add_argument("--suite", required=True)
+    benchmark_run.add_argument("--out-dir", required=True)
+    benchmark_run.add_argument("--max-cases", type=int)
+    benchmark_run.add_argument(
+        "--case-id",
+        action="append",
+        default=[],
+        help="run only the named case; repeat for a targeted regression set",
+    )
+    benchmark_run.add_argument("--temperature", type=float, default=0.0)
+    benchmark_run.add_argument("--max-tokens", type=int, default=4000)
+
+    benchmark_score = sub.add_parser(
+        "benchmark-score",
+        help="score saved Novel Benchmark v2 predictions without calling an API",
+    )
+    benchmark_score.add_argument("--suite", required=True)
+    benchmark_score.add_argument("--predictions", required=True)
+    benchmark_score.add_argument("--report", required=True)
+
+    material_import = sub.add_parser(
+        "material-import",
+        help="import author docx/text as reference-only, explicitly selected story material",
+    )
+    material_import.add_argument("--file", action="append", required=True)
+    material_import.add_argument(
+        "--kind",
+        required=True,
+        choices=[
+            "current_intent",
+            "character_design",
+            "future_outline",
+            "historical_reference",
+        ],
+    )
+    material_import.add_argument("--note", default="")
+
+    onboard = sub.add_parser(
+        "onboard-existing",
+        help="import an existing UTF-8 chapter set into a private auditable project",
+    )
+    onboard.add_argument("--manifest", required=True)
+    onboard.add_argument("--resume", action="store_true")
+
+    bootstrap = sub.add_parser(
+        "bootstrap-state",
+        help="resume ordered StateDelta extraction for an imported existing novel",
+    )
+    bootstrap.add_argument("--from-chapter", type=int)
+    bootstrap.add_argument("--to-chapter", type=int)
+    bootstrap.add_argument("--max-chapters", type=int)
+    bootstrap.add_argument("--audit-all", action="store_true")
+    bootstrap.add_argument("--temperature", type=float, default=0.0)
+    bootstrap.add_argument("--max-tokens", type=int, default=6000)
     return parser
 
 
@@ -364,6 +476,20 @@ def main(argv: list[str] | None = None) -> int:
                 relevant_threads=args.thread,
                 recent_chapter_count=args.recent_chapters,
                 max_chars=args.max_chars,
+                retrieval_mode=args.retrieval_mode,
+            )
+        )
+        return 0
+    if args.command == "context-policy-set":
+        _print_json(
+            set_context_retrieval_policy(
+                root,
+                mode=args.mode,
+                graph_hops=args.graph_hops,
+                max_remote_evidence=args.max_remote_evidence,
+                max_graph_state=args.max_graph_state,
+                llm_rerank=args.llm_rerank,
+                rerank_candidate_limit=args.rerank_candidate_limit,
             )
         )
         return 0
@@ -375,7 +501,6 @@ def main(argv: list[str] | None = None) -> int:
                 draft_file=Path(args.draft_file) if args.draft_file else None,
                 temperature=args.temperature,
                 max_tokens=args.max_tokens,
-                diversity_max_tokens=args.diversity_max_tokens,
             )
         )
         return 0
@@ -387,6 +512,7 @@ def main(argv: list[str] | None = None) -> int:
                 temperature=args.temperature,
                 max_tokens=args.max_tokens,
                 apply=args.apply,
+                completeness_audit=args.completeness_audit,
             )
         )
         return 0
@@ -433,6 +559,7 @@ def main(argv: list[str] | None = None) -> int:
                 target_total_chars=args.target_total_chars,
                 objective=args.objective,
                 author_intent=args.author_intent,
+                source_material_ids=args.material_id,
                 freedom_axes=args.freedom_axis,
                 entry_state=args.entry_state,
                 target_end_state=args.target_end_state,
@@ -476,6 +603,7 @@ def main(argv: list[str] | None = None) -> int:
                 unit_title=args.unit_title,
                 objective=args.objective,
                 author_intent=args.author_intent,
+                source_material_ids=args.material_id,
                 entry_state=args.entry_state,
                 target_end_state=args.target_end_state,
                 unit_payoffs=args.unit_payoff,
@@ -514,6 +642,16 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError("no active ArcContract")
         _print_json(review_arc_contract(root, arc))
         return 0
+    if args.command == "unit-completion-score":
+        _print_json(
+            score_unit_completion(
+                root,
+                arc_id=args.arc_id,
+                temperature=args.temperature,
+                max_tokens=args.max_tokens,
+            )
+        )
+        return 0
     if args.command == "llm-smoke":
         _print_json(build_client(root).smoke())
         return 0
@@ -522,6 +660,60 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "status":
         _print_json(status_report(root))
+        return 0
+    if args.command == "benchmark-run":
+        _print_json(
+            run_benchmark_with_api(
+                root,
+                suite_file=Path(args.suite),
+                output_dir=Path(args.out_dir),
+                max_cases=args.max_cases,
+                case_ids=args.case_id,
+                temperature=args.temperature,
+                max_tokens=args.max_tokens,
+            )
+        )
+        return 0
+    if args.command == "benchmark-score":
+        _print_json(
+            evaluate_benchmark(
+                Path(args.suite),
+                Path(args.predictions),
+                report_file=Path(args.report),
+            )
+        )
+        return 0
+    if args.command == "material-import":
+        _print_json(
+            import_author_materials(
+                root,
+                source_files=[Path(value) for value in args.file],
+                kind=args.kind,
+                note=args.note,
+            )
+        )
+        return 0
+    if args.command == "onboard-existing":
+        _print_json(
+            onboard_existing_novel(
+                root,
+                manifest_file=Path(args.manifest),
+                resume=args.resume,
+            )
+        )
+        return 0
+    if args.command == "bootstrap-state":
+        _print_json(
+            bootstrap_existing_state(
+                root,
+                from_chapter=args.from_chapter,
+                to_chapter=args.to_chapter,
+                max_chapters=args.max_chapters,
+                audit_all=args.audit_all,
+                temperature=args.temperature,
+                max_tokens=args.max_tokens,
+            )
+        )
         return 0
 
     parser.error(f"unknown command: {args.command}")

@@ -16,6 +16,11 @@
 | `pipeline.py` | 主编排层。负责初始化项目、生成外部创意合同、组装 prompt、单稿或并行候选生成、Judge 选优、审稿、返修和提交单元。 |
 | `models.py` | 数据契约层。用 Pydantic 定义 `AuthorStrategy`、`ReaderExpectationMap`、`ChapterContract`、`CharacterConstraints`、`PrewritePlan`、`ReviewResult`、`ChapterCommit` 等结构。 |
 | `novel_state.py` | 叙事状态层。维护八层 `NovelState v1`、章节证据清单、`StateDelta` 提取与权限校验、状态原子替换和动态上下文编译。 |
+| `evidence_graph.py` | 历史证据层。本地事件/证据图生成高召回候选，可用 API 在既有 evidence_id 中重排，排除姓名和词面误命中。 |
+| `author_materials.py` | 作者材料层。无额外依赖地提取 `.docx`，登记人物/大纲/历史参考，并强制 `reference_only + explicit_selection_only`。 |
+| `benchmark_v2.py` | 回归评测层。分别测连续性缺陷、StateDelta 覆盖和单元完成度，并在本地校验 evidence_id 与逐字引用。 |
+| `unit_completion.py` | 单元验收层。独立逐项核验结束状态、payoff 和成功条件，总完成判定由本地程序计算。 |
+| `onboarding.py` | 现有小说接入层。按顺序导入权威章节、生成证据清单并可恢复地初始化 StateDelta。 |
 | `author_policy.py` | 作者反馈策略层。把作者明确方向、文风偏好、连续性要求和最小修改纪律保存为 `author_locked` 规则，并按角色注入提示词。 |
 | `context_scorer.py` | 前文约束评分层。用同一份动态上下文对单稿的连续性、人物知识、时间线、世界规则、关系、伏笔和风格进行证据化评分。 |
 | `rolling_arc.py` | 单元剧控制层。把作者给出的下一个单元意图拆成若干 Beat，只激活当前章；每章状态更新后重排剩余 Beat，单元结束后停止并交回作者。 |
@@ -91,6 +96,17 @@ unit-plan / unit-advance
   -> 每次只物化下一个 chapter contract
   -> 单元实际正文达到目标结束状态后停止，等待作者输入下一个单元
 
+material-import / compile-context
+  -> Word/UTF-8 作者材料进入 reference-only 注册表
+  -> unit-plan / unit-branches 通过 --material-id 显式选择
+  -> 本地事件/证据图生成远距离历史候选
+  -> 可选 API evidence_id 重排剔除词面误命中
+  -> 修订旧章时按目标章开始前投影状态，屏蔽未来事实
+
+unit-completion-score / benchmark-run
+  -> 单元结束逐项核验作者验收条件
+  -> Benchmark v2 保存 prompt、原始返回、预测和本地证据指标
+
 可选 unit-branches（只在作者开放至少三个自由轴时）
   -> 三个隔离 Planner 生成 UnitBranchCard
   -> 六轴字段差异检查
@@ -133,22 +149,23 @@ agent_writer_cli.py
 | `NovelState` | `init` / `extract-state --apply` | 八层叙事状态：Canon Facts、Timeline、Entity State、Character Belief、Relationship Arc、Open Threads、Style Memory、Authority Layer。 |
 | `StateDelta` | `extract-state` | 只记录本章造成的持久变化；正文事实必须绑定段落 evidence ID 和哈希。 |
 | `ContextualScorecard` | `score` | 基于章节合同、最近已接收正文和有效状态的八维单稿评分卡。 |
-| `UnitArcContract`（内部兼容名 `ArcContract`） | `unit-plan` | 只代表一个作者指定的单元剧。章节数可由 Planner 自然决定，预计与实际正文总量均受 2 万字上限约束。 |
+| `UnitArcContract`（内部兼容名 `ArcContract`） | `unit-plan` | 只代表一个作者指定的单元剧。章节数可由 Planner 自然决定，预计与实际正文总量均受 2 万字上限约束；记录本单元显式选择的材料 ID。 |
+| `AuthorMaterialRegistry` | `material-import` | 保存作者材料哈希、类别和导入文本；材料不自动成为正文事实或作者锁。 |
 | `UnitBranchSet` | `unit-branches` | 可选的单元方案集。记录作者开放的自由轴、三张分支卡、六轴差异和双顺序语义审计；不自动替作者选择。 |
 | `ChapterCommit` | `commit` | 人工确认后的提交记录，记录 accepted、review、contract、评分卡以及状态同步进度。 |
 
 ## 工作流
 
 1. `init` 初始化书项目真值层。
-2. 先用 `policy-import` 或 `policy-add` 固化作者反馈。若核心机制已锁定，直接用 `unit-plan`；只有作者开放至少三个事件轴时才用 `unit-branches`，并由作者运行 `unit-branch-select` 选定方案。
+2. 先用 `policy-import` 或 `policy-add` 固化作者反馈；用 `material-import` 建材料库，并只为本单元选择必要的 `--material-id`。若核心机制已锁定，直接用 `unit-plan`；只有作者开放至少三个事件轴时才用 `unit-branches`，并由作者运行 `unit-branch-select` 选定方案。
 3. `unit-advance` 只激活当前单元的下一章，生成章节合同、角色边界卡和 prewrite plan。
 4. `write` 动态选择作者锁、有效状态和最近 2–3 章完整正文，生成写作任务书；如果前章 `StateDelta` 未同步则停止。
 5. `generate` 调用 LLM 生成单一章节草稿；高质量模式用 `generate-best` 并行生成候选、硬闸过滤并由 Judge 匿名正序/倒序复评。胜者不一致时停止选优。
 6. `review` 执行本地质量门禁；`score` 调用 API 生成基于前文的证据化单稿评分卡。
 7. `rewrite-brief` / `rewrite` 只修当前问题；正文变化后必须重新 `review` 和 `score`。
 8. `commit --approve` 人工确认后接收正文并生成证据清单，状态暂记为 `pending_extraction`。
-9. `extract-state --apply` 调用 API 提取 `StateDelta`，通过 evidence/hash/authority 校验后更新 `NovelState`。
-10. 再次运行 `unit-advance`：只重排当前单元的剩余 Beat 并激活下一章。单元结束后硬停止，等待作者提供下一个单元意图。
+9. `extract-state --completeness-audit --apply` 先提取 `StateDelta`，再运行只补遗漏的第二遍审计，通过 evidence/hash/authority 校验后更新 `NovelState`。
+10. 再次运行 `unit-advance`：只重排当前单元的剩余 Beat 并激活下一章。单元结束运行 `unit-completion-score`，然后硬停止，等待作者提供下一个单元意图。
 11. `index-report` 或 `status` 查看产物、阻断项、状态 revision 和待同步章节。
 
 作者策略与可选 Branch-first 示例：

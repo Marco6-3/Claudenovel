@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .author_policy import author_policy_path, load_author_policy, render_author_policy
+from .author_materials import render_selected_author_materials
 from .llm_client import build_client
 from .models import (
     ArcBeat,
@@ -199,6 +200,7 @@ def _arc_planner_prompt(
     success_criteria: list[str],
     context_json: str,
     author_policy: str,
+    source_materials: str,
 ) -> str:
     chapters = (
         list(range(start_chapter, start_chapter + horizon))
@@ -253,6 +255,9 @@ def _arc_planner_prompt(
         f"success_criteria={json.dumps(success_criteria, ensure_ascii=False)}\n\n"
         "## 作者反馈策略（author_locked）\n"
         f"{author_policy}\n\n"
+        "## 本单元显式选择的作者材料（reference_only）\n"
+        "这些材料只约束本单元构思，不自动证明正文已经发生，也不得覆盖 AuthorPolicy。\n"
+        f"{source_materials}\n\n"
         "## 动态上下文\n"
         f"{context_json}\n\n"
         "## 输出结构\n"
@@ -269,6 +274,7 @@ def plan_arc_with_api(
     unit_title: str = "",
     objective: str,
     author_intent: str,
+    source_material_ids: list[str] | None = None,
     entry_state: list[str] | None = None,
     target_end_state: list[str] | None = None,
     unit_payoffs: list[str] | None = None,
@@ -296,6 +302,8 @@ def plan_arc_with_api(
     target = [item.strip() for item in (target_end_state or []) if item.strip()]
     payoffs = [item.strip() for item in (unit_payoffs or []) if item.strip()]
     author_policy_profile = load_author_policy(root)
+    selected_material_ids = list(dict.fromkeys(source_material_ids or []))
+    source_materials = render_selected_author_materials(root, selected_material_ids)
     prompt = _arc_planner_prompt(
         start_chapter=start_chapter,
         horizon=horizon,
@@ -311,10 +319,11 @@ def plan_arc_with_api(
         success_criteria=criteria,
         context_json=context.model_dump_json(indent=2),
         author_policy=render_author_policy(root, role="planner"),
+        source_materials=source_materials,
     )
     client = build_client(root, role="PLANNER")
     fingerprint = hashlib.sha256(
-        f"{start_chapter}|{horizon}|{target_total_chars}|{objective}|{author_intent}".encode("utf-8")
+        f"{start_chapter}|{horizon}|{target_total_chars}|{objective}|{author_intent}|{selected_material_ids}".encode("utf-8")
     ).hexdigest()[:12]
     arc_id = f"arc_{start_chapter:04d}_{fingerprint}"
     prompt_file = root / "arc_contracts" / f"{arc_id}_initial_prompt.md"
@@ -355,6 +364,7 @@ def plan_arc_with_api(
             unit_title=unit_title or objective[:40],
             objective=objective,
             author_intent=author_intent,
+            source_material_ids=selected_material_ids,
             entry_state=entry,
             target_end_state=target,
             unit_payoffs=payoffs,
@@ -544,6 +554,7 @@ def _replan_prompt(
     context_json: str,
     remaining: list[ArcBeat],
     author_policy: str,
+    source_materials: str,
 ) -> str:
     shape = {
         "beats": [
@@ -572,6 +583,8 @@ def _replan_prompt(
         f"ArcContract={arc.model_dump_json(indent=2)}\n\n"
         f"Accepted beats={json.dumps(accepted, ensure_ascii=False)}\n\n"
         f"AuthorPolicy={author_policy}\n\n"
+        "Explicitly selected author materials (reference_only):\n"
+        f"{source_materials}\n\n"
         f"Latest context={context_json}\n\n"
         f"Output shape={json.dumps(shape, ensure_ascii=False)}"
     )
@@ -623,6 +636,7 @@ def replan_arc_with_api(
         context.model_dump_json(indent=2),
         remaining,
         render_author_policy(root, role="planner"),
+        render_selected_author_materials(root, arc.source_material_ids),
     )
     client = build_client(root, role="PLANNER")
     raw = client.complete(

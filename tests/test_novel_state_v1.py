@@ -250,6 +250,111 @@ def test_api_state_extractor_forces_metadata_then_applies_verified_delta(
     assert load_novel_state(root).entity_states[0].authority == "text_confirmed"
 
 
+def test_state_extractor_completeness_audit_adds_only_missing_evidence_bound_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _project(tmp_path)
+    manifest = read_model(evidence_manifest_path(root, 1), ChapterEvidenceManifest)
+    first = manifest.paragraphs[0]
+    second = manifest.paragraphs[1]
+    calls = 0
+
+    class FakeStateClient:
+        config = type("Config", (), {"model": "fake-state-auditor"})()
+
+        def complete(self, prompt: str, *, system: str, temperature: float, max_tokens: int) -> str:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return json.dumps(
+                    {
+                        "additions": [
+                            {
+                                "layer": "entity_states",
+                                "record": {
+                                    "state_id": "lingmo.left_hand_burn.audit",
+                                    "subject": "凌默",
+                                    "claim": "左手伤势",
+                                    "value": "仍有灼伤并已包扎",
+                                    "authority": "text_confirmed",
+                                    "evidence_refs": [
+                                        {
+                                            "evidence_id": first.evidence_id,
+                                            "chapter_number": 1,
+                                            "paragraph_index": first.paragraph_index,
+                                            "paragraph_sha256": first.paragraph_sha256,
+                                            "quote": "左手仍有灼伤",
+                                        }
+                                    ],
+                                    "introduced_chapter": 1,
+                                    "updated_chapter": 1,
+                                },
+                            }
+                        ],
+                        "replacements": [],
+                        "resolutions": [],
+                        "change_summary": ["记录伤势"],
+                    },
+                    ensure_ascii=False,
+                )
+            assert "第一遍已提取 StateDelta" in prompt
+            return json.dumps(
+                {
+                    "missing_additions": [
+                        {
+                            "layer": "timeline",
+                            "record": {
+                                "state_id": "lingmo.school_arrival.ch1",
+                                "subject": "凌默",
+                                "claim": "到校时间",
+                                "value": "七点整带伤走进教室",
+                                "authority": "text_confirmed",
+                                "evidence_refs": [
+                                    {
+                                        "evidence_id": second.evidence_id,
+                                        "chapter_number": 1,
+                                        "paragraph_index": second.paragraph_index,
+                                        "paragraph_sha256": second.paragraph_sha256,
+                                        "quote": "七点整",
+                                    }
+                                ],
+                                "introduced_chapter": 1,
+                                "updated_chapter": 1,
+                            },
+                        }
+                    ],
+                    "missing_replacements": [],
+                    "missing_resolutions": [],
+                    "audit_notes": ["补充跨章时间锚点"],
+                },
+                ensure_ascii=False,
+            )
+
+    monkeypatch.setattr(
+        "agent_writer.novel_state.build_client",
+        lambda root, role=None: FakeStateClient(),
+    )
+
+    result = extract_state_delta(
+        root,
+        chapter_number=1,
+        completeness_audit=True,
+        apply=True,
+    )
+
+    state = load_novel_state(root)
+    assert calls == 2
+    assert result["completeness_audit"] is True
+    assert {item.state_id for item in state.entity_states} == {
+        "lingmo.left_hand_burn.audit"
+    }
+    assert {item.state_id for item in state.timeline} == {
+        "lingmo.school_arrival.ch1"
+    }
+    assert Path(result["completeness_result"]).exists()
+
+
 def test_contextual_scorer_uses_known_prior_evidence_and_computes_score(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .author_policy import author_policy_path, load_author_policy, render_author_policy
+from .author_materials import render_selected_author_materials
 from .llm_client import build_client
 from .models import (
     ArcContract,
@@ -110,6 +111,7 @@ def _branch_prompt(
     profile_instruction: str,
     context_json: str,
     author_policy: str,
+    source_materials: str,
 ) -> str:
     shape = {
         "unit_title": "单元名",
@@ -166,6 +168,9 @@ def _branch_prompt(
         "只有这些轴允许为了探索而变化；作者已锁定的其他内容必须保持。\n\n"
         "## AuthorPolicy\n"
         f"{author_policy}\n\n"
+        "## 本单元显式选择的作者材料（reference_only）\n"
+        "材料不是已发生正文事实；只在不冲突于 AuthorPolicy 和截止切点的范围内使用。\n"
+        f"{source_materials}\n\n"
         "## 截止切点可见上下文\n"
         f"{context_json}\n\n"
         "## 输出结构\n"
@@ -336,6 +341,7 @@ def generate_unit_branches(
     target_total_chars: int = 20000,
     objective: str,
     author_intent: str,
+    source_material_ids: list[str] | None = None,
     entry_state: list[str] | None = None,
     target_end_state: list[str] | None = None,
     unit_payoffs: list[str] | None = None,
@@ -371,6 +377,8 @@ def generate_unit_branches(
         raise ValueError("cannot branch-plan against stale NovelState")
     policy = load_author_policy(root)
     policy_hash = sha256_file(author_policy_path(root))
+    selected_material_ids = list(dict.fromkeys(source_material_ids or []))
+    source_materials = render_selected_author_materials(root, selected_material_ids)
     common = {
         "entry_state": [item.strip() for item in (entry_state or []) if item.strip()],
         "target_end_state": [item.strip() for item in (target_end_state or []) if item.strip()],
@@ -384,7 +392,7 @@ def generate_unit_branches(
         ],
     }
     fingerprint = hashlib.sha256(
-        f"{BRANCH_PROMPT_VERSION}|{start_chapter}|{target_total_chars}|{objective}|{author_intent}|{policy_hash}".encode(
+        f"{BRANCH_PROMPT_VERSION}|{start_chapter}|{target_total_chars}|{objective}|{author_intent}|{selected_material_ids}|{policy_hash}".encode(
             "utf-8"
         )
     ).hexdigest()[:12]
@@ -409,6 +417,7 @@ def generate_unit_branches(
             profile_instruction=BRANCH_PROFILES[profile_name],
             context_json=context.model_dump_json(indent=2),
             author_policy=render_author_policy(root, role="planner"),
+            source_materials=source_materials,
             freedom_axes=open_axes,
             **common,
         )
@@ -443,6 +452,7 @@ def generate_unit_branches(
                 target_total_chars=target_total_chars,
                 objective=objective,
                 author_intent=author_intent,
+                source_material_ids=selected_material_ids,
                 state_revision=context.state_revision,
                 author_policy_revision=policy.revision,
                 author_policy_sha256=policy_hash,
@@ -494,6 +504,7 @@ def generate_unit_branches(
         target_total_chars=target_total_chars,
         objective=objective,
         author_intent=author_intent,
+        source_material_ids=selected_material_ids,
         freedom_axes=open_axes,
         state_revision=context.state_revision,
         author_policy_revision=policy.revision,
@@ -549,6 +560,7 @@ def select_unit_branch(
         unit_title=card.unit_title,
         objective=branch_set.objective,
         author_intent=branch_set.author_intent,
+        source_material_ids=branch_set.source_material_ids,
         entry_state=branch_set.entry_state,
         target_end_state=branch_set.target_end_state,
         unit_payoffs=branch_set.unit_payoffs,
