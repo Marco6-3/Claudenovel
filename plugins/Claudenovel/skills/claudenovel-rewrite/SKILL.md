@@ -10,10 +10,14 @@ allowed-tools: Read Write Edit Bash
 
 对单章文本执行可追踪改写：先诊断，再生成建议，再改写，最后输出 diff 和报告。
 
+作者要求修改完整单元且已有运行记录时，使用 `claudenovel-write` 的新 run-id 与作者反馈流程。只要求评价时使用 `--review-only`。
+根据本 SKILL.md 位置向上两级定位插件根目录；从小说项目目录运行以加载其 `.env`，输出放在插件缓存之外。
+沿用现有 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL` 或兼容配置，不自行更换供应商，不展示密钥。
+
 ## 输入
 
 - 必须有待改写章节文件，例如 `chapter.txt`。
-- 推荐提供全文小说文件作为上下文和文风参考。
+- 推荐提供作者选定的前文与文风参考，另存为上下文文件；修订早期章节时不要把未来章节作为角色已知经历。
 - 可选提供 `memory_summary.json`。
 
 ## 标准命令
@@ -27,7 +31,7 @@ allowed-tools: Read Write Edit Bash
 审查加改写：
 
 ```powershell
-python "<PLUGIN_ROOT>\rewrite_chapter.py" `
+python -X utf8 "<PLUGIN_ROOT>\rewrite_chapter.py" `
   --chapter-file "<CHAPTER_FILE>" `
   --novel "<NOVEL_TXT>" `
   --out-dir "<OUT_DIR>"
@@ -36,7 +40,7 @@ python "<PLUGIN_ROOT>\rewrite_chapter.py" `
 只审查不改写：
 
 ```powershell
-python "<PLUGIN_ROOT>\rewrite_chapter.py" `
+python -X utf8 "<PLUGIN_ROOT>\rewrite_chapter.py" `
   --chapter-file "<CHAPTER_FILE>" `
   --novel "<NOVEL_TXT>" `
   --out-dir "<OUT_DIR>" `

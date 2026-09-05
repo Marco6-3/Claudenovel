@@ -30,7 +30,7 @@ from novel_parser.memory_rag import (
 
 
 ROOT = Path(__file__).resolve().parent
-TXT = next(ROOT.glob("*.txt"))
+TXT = ROOT / "apk.tw_地府微信群.txt"
 OUT = ROOT / "novel_rag_output"
 
 
@@ -50,6 +50,8 @@ def main() -> None:
     parser.add_argument("--txt-path", type=Path, default=TXT, help="Novel text path")
     parser.add_argument("--out-dir", type=Path, default=OUT, help="Output directory")
     args = parser.parse_args()
+    if (args.index or args.memory_only) and not args.txt_path.is_file():
+        parser.error("请通过 --txt-path 指定存在的小说文件。")
 
     out_dir: Path = args.out_dir
     out_dir.mkdir(exist_ok=True)

@@ -13,10 +13,9 @@ allowed-tools: Read Write Edit Bash
 ## 前置条件
 
 - 已有任务文件夹，且其中存在 `data/editorial_revision_prompt.md`。
-- `.env` 或环境变量中配置了 `DEEPSEEK_API_KEY` 或 `OPENAI_API_KEY`。
-- 推荐模型配置：
-  - `DEEPSEEK_BASE_URL=https://api.deepseek.com`
-  - `DEEPSEEK_MODEL=deepseek-v4-pro`
+- 从小说项目目录运行，使用项目 `.env` 或现有进程中的 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`；也兼容原有 DeepSeek/OpenAI 配置。沿用已配置的供应商，不自行切换模型或展示密钥。
+- 根据本 SKILL.md 位置向上两级定位插件根目录。输入和输出放在插件缓存之外。
+- 写完整单元使用 `claudenovel-write`，本技能只做诊断。
 
 ## 标准命令
 
@@ -27,7 +26,7 @@ allowed-tools: Read Write Edit Bash
 - 下方用 `<PLUGIN_ROOT>` 表示该目录。
 
 ```powershell
-python "<PLUGIN_ROOT>\analyze_enhanced.py" `
+python -X utf8 "<PLUGIN_ROOT>\analyze_enhanced.py" `
   --txt-path "<NOVEL_TXT>" `
   --out-dir "<OUT_DIR>" `
   --organized-output `

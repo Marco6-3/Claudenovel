@@ -77,6 +77,7 @@ def _render_prompt(case: dict[str, Any], chapters: dict[int, dict[str, str]]) ->
         chapter = chapters[number]
         context_blocks.append(f"### 可见原文 CH{number:03d}《{chapter['title']}》\n\n{chapter['body']}")
     bullet = lambda values: "\n".join(f"- {value}" for value in values)
+    visible_context = "\n\n".join(context_blocks)
     return (
         "# 《地府微信群》前期留出原章写作 Benchmark\n\n"
         "## 数据隔离\n\n"
@@ -96,7 +97,7 @@ def _render_prompt(case: dict[str, Any], chapters: dict[int, dict[str, str]]) ->
         "## 成功标准\n\n"
         f"{bullet(case['success_criteria'])}\n\n"
         "## 可见原文（只到切点）\n\n"
-        f"{'\n\n'.join(context_blocks)}\n\n"
+        f"{visible_context}\n\n"
         "## 输出要求\n\n"
         "- 写 2600–3600 个汉字，第三人称贴近陈默。\n"
         "- 延续前文网络化轻喜剧、短段落和内心吐槽，但不要机械复制口头禅。\n"

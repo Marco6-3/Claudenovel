@@ -10,7 +10,7 @@ from novel_parser.pipeline import run_pipeline
 
 
 ROOT = Path(__file__).resolve().parent
-TXT = next(ROOT.glob("*.txt"))
+TXT = ROOT / "apk.tw_地府微信群.txt"
 OUT = ROOT / "novel_analysis_enhanced"
 
 
@@ -43,8 +43,8 @@ def main() -> None:
     parser.add_argument(
         "--txt-path",
         type=Path,
-        default=TXT,
-        help="Novel text path. Defaults to the first .txt file in this directory.",
+        default=TXT if TXT.is_file() else None,
+        help="Novel text path. Required when the bundled default novel is absent.",
     )
     parser.add_argument(
         "--evaluate-chapter",
@@ -156,6 +156,8 @@ def main() -> None:
         help="Use task-root/report.md plus task-root/data/ for generated base data.",
     )
     args = parser.parse_args()
+    if args.txt_path is None:
+        parser.error("请通过 --txt-path 指定小说文件。")
     apply_aliases = args.txt_path.resolve() == TXT.resolve()
     task_name = args.context_query or args.output_name or "小说分析"
     layout = build_organized_output(args.txt_path, task_name, args.out_dir) if args.organized_output else None

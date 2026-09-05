@@ -1,7 +1,7 @@
 {
   "name": "claudenovel",
-  "version": "0.2.0",
-  "description": "证据化中文小说分析与单章改写插件",
+  "version": "0.2.0+codex.20260905150537",
+  "description": "\u4f5c\u8005\u65b9\u6848\u9a71\u52a8\u7684\u4e2d\u6587\u5355\u5143\u5199\u4f5c\u3001\u53cd\u9988\u4fee\u8ba2\u4e0e\u8bc1\u636e\u5316\u7f16\u8f91\u63d2\u4ef6",
   "author": {
     "name": "mingzhe Liu"
   },
@@ -13,6 +13,8 @@
     "webnovel",
     "chinese-writing",
     "editorial-analysis",
+    "unit-writing",
+    "author-feedback",
     "single-chapter-rewrite",
     "rag",
     "deepseek"
@@ -20,8 +22,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Claudenovel",
-    "shortDescription": "证据化小说分析和单章改写工作流",
-    "longDescription": "把 Claudenovel 的 Python 分析、编辑报告和单章改写脚本封装为 Codex 可发现的插件技能；不提供无人值守续章。",
+    "shortDescription": "\u6309\u4f5c\u8005\u65b9\u6848\u5199\u5b8c\u6574\u5355\u5143\uff0c\u5ba1\u9605\u5e76\u6309\u53cd\u9988\u6539\u7a3f",
+    "longDescription": "\u4ece\u4f5c\u8005\u65b9\u6848\u4e0e\u660e\u786e\u9009\u62e9\u7684\u524d\u60c5\u8d77\u8349\u5b8c\u6574\u5355\u5143\uff0c\u5728\u72ec\u7acb\u8349\u7a3f\u4e2d\u5ba1\u9605\u548c\u6709\u9650\u4fee\u8ba2\uff0c\u652f\u6301\u4e2d\u65ad\u6062\u590d\u53ca\u4f5c\u8005\u53cd\u9988\u6539\u7a3f\u3002\u4fdd\u7559\u9010\u7ae0\u5199\u4f5c\u3001\u8bc1\u636e\u95ee\u7b54\u3001\u7f16\u8f91\u8bca\u65ad\u4e0e\u5355\u7ae0\u6539\u5199\uff1b\u5019\u9009\u4e0d\u81ea\u52a8\u8fdb\u5165\u6b63\u5f0f\u5c0f\u8bf4\u3002",
     "developerName": "mingzhe Liu",
     "category": "Productivity",
     "capabilities": [
@@ -30,9 +32,9 @@
       "Workflow"
     ],
     "defaultPrompt": [
-      "分析这部小说并生成编辑诊断报告",
-      "围绕人类提供的创意审查并改写这个单章",
-      "审查并改写这个章节"
+      "\u6309\u6211\u7684\u5355\u5143\u65b9\u6848\u548c\u9009\u5b9a\u524d\u60c5\u5199\u5b8c\u6574\u5355\u5143\uff0c\u4ea4\u7ed9\u6211\u901a\u8bfb",
+      "\u6839\u636e\u6211\u7684\u53cd\u9988\u53e6\u5b58\u4fee\u8ba2\u8fd9\u4efd\u5355\u5143\u7a3f\uff0c\u4fdd\u7559\u539f\u7a3f",
+      "\u5206\u6790\u524d\u6587\u5e76\u5ba1\u67e5\u6539\u5199\u8fd9\u4e2a\u7ae0\u8282"
     ],
     "brandColor": "#2563EB"
   }

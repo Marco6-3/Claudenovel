@@ -1,6 +1,6 @@
 ---
 name: claudenovel-analyze
-description: 分析中文小说或小说片段，生成证据化原文包、编辑诊断提示词、人物关系、深度问答证据矩阵和 1M 大上下文阅读包。适用于用户说“分析小说”“评价片段”“给后续路线”“人物感情线”“是否抛弃/身份争议/结局合理性”。
+description: 为写作和改稿分析中文小说或片段，生成证据化原文包、人物关系与编辑诊断提示词，或核对具体文学问题。适用于“分析前文”“评价片段”“检查人物感情线”。写完整单元使用 claudenovel-write。
 allowed-tools: Read Write Edit Bash
 ---
 
@@ -9,6 +9,10 @@ allowed-tools: Read Write Edit Bash
 ## 目标
 
 把用户给出的 `.txt` 或 `.docx` 小说输入转成可供 agent 和 LLM 使用的证据化分析产物。不要只给聊天建议，必须落地文件。
+
+本技能是按需分析工具，不是写作前置步骤。用户要求直接按方案写作时，使用 `claudenovel-write`。
+所有命令使用 `python -X utf8`；长中文问题与方案优先通过 UTF-8 文件准备，避免 shell 编码损坏。
+根据本 SKILL.md 位置向上两级定位插件根目录，输出放在插件缓存之外。只评价文本时不调用写作或提交命令。
 
 ## 输入识别
 
@@ -28,7 +32,7 @@ allowed-tools: Read Write Edit Bash
 - 下方用 `<PLUGIN_ROOT>` 表示该目录。
 
 ```powershell
-python "<PLUGIN_ROOT>\analyze_enhanced.py" `
+python -X utf8 "<PLUGIN_ROOT>\analyze_enhanced.py" `
   --txt-path "<NOVEL_TXT>" `
   --out-dir "<OUT_DIR>" `
   --organized-output `
@@ -45,7 +49,7 @@ python "<PLUGIN_ROOT>\analyze_enhanced.py" `
 小证据矩阵模式：
 
 ```powershell
-python "<PLUGIN_ROOT>\answer_question.py" `
+python -X utf8 "<PLUGIN_ROOT>\answer_question.py" `
   --txt-path "<NOVEL_TXT>" `
   --question "<用户问题>" `
   --focus-entity "角色A" `
@@ -54,10 +58,10 @@ python "<PLUGIN_ROOT>\answer_question.py" `
   --organized-output
 ```
 
-如果模型上下文足够大，例如 1M 上下文，优先启用大上下文阅读包：
+只有用户需要全文阅读、且已核对实际模型输入输出预算时，才启用大上下文阅读包。字符预算不等于 token 上限，不能按“1M”名称直接推定可容纳文本：
 
 ```powershell
-python "<PLUGIN_ROOT>\answer_question.py" `
+python -X utf8 "<PLUGIN_ROOT>\answer_question.py" `
   --txt-path "<NOVEL_TXT>" `
   --question "<用户问题>" `
   --focus-entity "角色A" `
@@ -68,10 +72,10 @@ python "<PLUGIN_ROOT>\answer_question.py" `
   --context-budget-chars 900000
 ```
 
-比较小矩阵模式和 1M 大上下文模式：
+以下比较命令仅用于用户明确要求的覆盖比较，不作为日常分析步骤：
 
 ```powershell
-python "<PLUGIN_ROOT>\answer_question.py" `
+python -X utf8 "<PLUGIN_ROOT>\answer_question.py" `
   --txt-path "<NOVEL_TXT>" `
   --focus-entity "角色A" `
   --focus-entity "角色B" `

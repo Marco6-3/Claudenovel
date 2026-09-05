@@ -1,5 +1,7 @@
 # Claudenovel 实验索引与继续运行顺序
 
+当前日常写作入口是根目录 `agent_writer_cli.py unit-run`，使用方式见 [完整单元运行器](../docs/UNIT_DRAFT_RUNNER.md)。本页是研究索引，不是写作前置清单。本地模型训练链已退役，范围见 [精简记录](../docs/WRITING_CLEANUP.md)；人工反馈与 API 检查继续保留。
+
 本目录同时保存实验协议、可执行工具和不可变的历史 run bundle。新 clone 不需要依赖此前机器上的 `outputs/` 或 `work/`，即可检查已经得到的证据并继续下一轮。
 
 ## 0. 环境与基线验证

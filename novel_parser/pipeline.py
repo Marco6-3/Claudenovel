@@ -63,7 +63,7 @@ def run_pipeline(
     sentiment.export_sentiment(sent, out_dir)
 
     # 6. Enhanced TOC + briefs
-    toc_lines = ["# 《地府微信群》卷章目录（增强版）\n"]
+    toc_lines = [f"# 《{txt_path.stem}》卷章目录（增强版）\n"]
     briefs = []
     current_vol = None
     for ch in chapters:
@@ -106,9 +106,16 @@ def run_pipeline(
                 f"evaluate_chapter must be between 1 and {len(chapters)}, got {evaluate_chapter}"
             )
         target = chapters[evaluate_chapter - 1]
-        baseline = evaluator.build_baseline(chapters)
-        metrics = [evaluator.compute_metrics(ch) for ch in chapters]
-        report = evaluator.evaluate_chapter(target, baseline, chapters, metrics)
+        evaluation_names = list(aliases)
+        baseline = evaluator.build_baseline(chapters, evaluation_names)
+        metrics = [evaluator.compute_metrics(ch, evaluation_names) for ch in chapters]
+        report = evaluator.evaluate_chapter(
+            target,
+            baseline,
+            chapters,
+            metrics,
+            entity_names=evaluation_names,
+        )
         evaluation_output = f"chapter_{target.global_index:03d}_evaluation.md"
         evaluator.export_evaluation(report, out_dir / evaluation_output, target.title)
 
@@ -117,9 +124,16 @@ def run_pipeline(
         input_text = normalizer.normalize_text(raw_input)
         title = evaluate_file.stem
         target = evaluator.build_external_chapter(input_text, title=title)
-        baseline = evaluator.build_baseline(chapters)
-        metrics = [evaluator.compute_metrics(ch) for ch in chapters]
-        report = evaluator.evaluate_chapter(target, baseline, chapters, metrics)
+        evaluation_names = list(aliases)
+        baseline = evaluator.build_baseline(chapters, evaluation_names)
+        metrics = [evaluator.compute_metrics(ch, evaluation_names) for ch in chapters]
+        report = evaluator.evaluate_chapter(
+            target,
+            baseline,
+            chapters,
+            metrics,
+            entity_names=evaluation_names,
+        )
         llm_section = None
         llm_error = None
         llm_truncated = False

@@ -11,7 +11,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from .normalizer import ENTITY_ALIASES
 from .sentiment import score_text
@@ -115,7 +115,10 @@ def _char_ttr(text: str) -> float:
     return len(set(bigrams)) / len(bigrams)
 
 
-def compute_metrics(ch: Chapter) -> ChapterMetrics:
+def compute_metrics(
+    ch: Chapter,
+    entity_names: Optional[Sequence[str]] = None,
+) -> ChapterMetrics:
     body = ch.body
     paragraphs = ch.paragraphs
     dialogues = ch.dialogues
@@ -135,8 +138,9 @@ def compute_metrics(ch: Chapter) -> ChapterMetrics:
     conflict_hits = sum(body.count(w) for w in CONFLICT_WORDS)
     suspense_hits = sum(body.count(w) for w in SUSPENSE_MARKERS)
     rhet_hits = sum(body.count(w) for w in RHYTHRIC_MARKERS)
-    entity_hits = sum(body.count(name) for name in CANONICAL_NAMES)
-    present_entities = {name for name in CANONICAL_NAMES if name in body}
+    names = entity_names if entity_names is not None else CANONICAL_NAMES
+    entity_hits = sum(body.count(name) for name in names)
+    present_entities = {name for name in names if name in body}
 
     # scene switches
     scene_switches = max(0, len(ch.scenes) - 1)
@@ -170,9 +174,12 @@ def compute_metrics(ch: Chapter) -> ChapterMetrics:
     )
 
 
-def build_baseline(all_chapters: List[Chapter]) -> BaselineStats:
+def build_baseline(
+    all_chapters: List[Chapter],
+    entity_names: Optional[Sequence[str]] = None,
+) -> BaselineStats:
     """Compute population stats across all chapters."""
-    all_metrics = [compute_metrics(ch) for ch in all_chapters]
+    all_metrics = [compute_metrics(ch, entity_names) for ch in all_chapters]
     keys = [
         "chars", "paragraph_count", "dialogue_ratio", "avg_sentence_len",
         "sentence_len_std", "word_ttr", "conflict_density", "suspense_density",
@@ -226,11 +233,12 @@ def evaluate_chapter(
     baseline: BaselineStats,
     all_chapters: List[Chapter],
     all_metrics: Optional[List[ChapterMetrics]] = None,
+    entity_names: Optional[Sequence[str]] = None,
 ) -> QualityReport:
     """Evaluate a chapter against the novel baseline."""
-    m = compute_metrics(ch)
+    m = compute_metrics(ch, entity_names)
     if all_metrics is None:
-        all_metrics = [compute_metrics(c) for c in all_chapters]
+        all_metrics = [compute_metrics(c, entity_names) for c in all_chapters]
 
     # Percentiles
     pcts = {}

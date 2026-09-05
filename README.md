@@ -145,7 +145,16 @@ Judge 未单独配置 endpoint 或 key 时复用 Writer 配置。`generate-best`
 - `docs/research/`：论文依据与实验方案。
 - `novel_parser/`：只读解析、证据检索和单章诊断底座。
 - `skills/`：面向 Agent 的工作流说明。
-- `webnovel-writer/`：历史研究快照，不属于默认写作链，也不应作为无人续写入口。
+- `plugins/Claudenovel/`：自带当前写作代码的插件，提供单元写作、分析、报告和单章改写四个技能。
+- `scripts/sync_plugin.py`：从主源码同步插件发行副本；`--check` 检查差异。
+
+旧 `webnovel-writer` 系统、专用旧分析脚本和本地模型训练链已移出工作树并在仓库外保存；原稿、人工标注、历史证据与 API 检查保留。范围与恢复说明见 [本轮精简记录](docs/WRITING_CLEANUP.md)。
+
+## 插件
+
+插件现在优先使用 `claudenovel-write`：作者方案 → 完整单元候选 → 审阅与有限修订 → 交作者通读。无需先跑分析或训练。已有逐章命令继续可用。
+
+插件内自带 `agent_writer/` 与 `novel_parser/`，从安装目录独立运行；小说项目和配置保存在插件之外。详见 [插件说明](plugins/Claudenovel/README.md)。源码修改后运行 `python -X utf8 scripts/sync_plugin.py`，提交前使用 `--check` 核对。
 
 ## 验证
 

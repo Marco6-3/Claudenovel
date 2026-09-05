@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import json
+import http.client
 import os
+import socket
+import time
 import urllib.error
 import urllib.request
 from dataclasses import asdict
@@ -138,7 +141,12 @@ def build_editorial_prompt(
     return prompt, truncated
 
 
-def _post_chat(payload: Dict[str, Any], timeout: int = 600) -> Tuple[str, str]:
+def _post_chat(
+    payload: Dict[str, Any],
+    timeout: int = 600,
+    *,
+    max_attempts: int = 3,
+) -> Tuple[str, str]:
     api_key, base_url, model = _env_config()
     payload = {**payload, "model": model}
     if model.lower() == "kimi-k3":
@@ -149,23 +157,43 @@ def _post_chat(payload: Dict[str, Any], timeout: int = 600) -> Tuple[str, str]:
         effort = os.environ.get("LLM_REASONING_EFFORT", "omit")
         if effort != "omit":
             payload["reasoning_effort"] = effort
-    req = urllib.request.Request(
-        f"{base_url}/chat/completions",
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"LLM 请求失败：HTTP {exc.code} {body[:1200]}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"LLM 请求失败：{exc.reason}") from exc
+    request_data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    attempts = max(1, max_attempts)
+    last_error: BaseException | None = None
+    for attempt in range(1, attempts + 1):
+        req = urllib.request.Request(
+            f"{base_url}/chat/completions",
+            data=request_data,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            retryable = exc.code == 429 or 500 <= exc.code < 600
+            if not retryable or attempt >= attempts:
+                raise RuntimeError(f"LLM 请求失败：HTTP {exc.code} {body[:1200]}") from exc
+            last_error = exc
+        except (
+            urllib.error.URLError,
+            http.client.IncompleteRead,
+            json.JSONDecodeError,
+            TimeoutError,
+            socket.timeout,
+        ) as exc:
+            if attempt >= attempts:
+                detail = getattr(exc, "reason", str(exc))
+                raise RuntimeError(f"LLM 请求失败（重试 {attempts} 次后）：{detail}") from exc
+            last_error = exc
+        time.sleep(min(2 ** (attempt - 1), 4))
+    else:
+        raise RuntimeError(f"LLM 请求失败：{last_error}")
 
     try:
         content = data["choices"][0]["message"]["content"]
@@ -194,6 +222,7 @@ def generate_editorial_report(
             "temperature": 0.4,
             "reasoning_effort": "high",
             "thinking": {"type": "enabled"},
+            "max_tokens": 12000,
         },
         timeout=600,
     )
@@ -251,6 +280,7 @@ def generate_context_report(prompt_text: str) -> Tuple[str, str]:
             "temperature": 0.35,
             "reasoning_effort": "high",
             "thinking": {"type": "enabled"},
+            "max_tokens": 16000,
         },
         timeout=600,
     )
