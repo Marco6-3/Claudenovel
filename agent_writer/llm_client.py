@@ -30,6 +30,8 @@ class LLMConfig:
     timeout: int = 120
     thinking: str = "omit"
     response_format: str = "text"
+    reasoning_effort: str = "omit"
+    context_window_tokens: int = 0
 
     @classmethod
     def from_env(cls, project_root: Path | None = None, *, role: str | None = None) -> "LLMConfig":
@@ -41,6 +43,8 @@ class LLMConfig:
         timeout_names = ["LLM_TIMEOUT"]
         thinking_names = ["LLM_THINKING"]
         response_format_names = ["LLM_RESPONSE_FORMAT"]
+        effort_names = ["LLM_REASONING_EFFORT"]
+        window_names = ["LLM_CONTEXT_WINDOW_TOKENS"]
         if role_prefix:
             base_names.insert(0, f"{role_prefix}_BASE_URL")
             model_names.insert(0, f"{role_prefix}_MODEL")
@@ -48,12 +52,21 @@ class LLMConfig:
             timeout_names.insert(0, f"{role_prefix}_TIMEOUT")
             thinking_names.insert(0, f"{role_prefix}_THINKING")
             response_format_names.insert(0, f"{role_prefix}_RESPONSE_FORMAT")
+            effort_names.insert(0, f"{role_prefix}_REASONING_EFFORT")
+            window_names.insert(0, f"{role_prefix}_CONTEXT_WINDOW_TOKENS")
         base_url = first_env(*base_names, default="")
         model = first_env(*model_names, default="")
         api_key = first_env(*key_names, default="")
         timeout_raw = first_env(*timeout_names, default="120")
         default_thinking = "disabled" if "deepseek.com" in base_url.lower() else "omit"
         thinking = first_env(*thinking_names, default=default_thinking).strip().lower()
+        reasoning_effort = first_env(*effort_names, default="omit").strip().lower()
+        try:
+            context_window_tokens = int(first_env(*window_names, default="0"))
+        except ValueError as exc:
+            raise LLMConfigError("context window must be a non-negative integer") from exc
+        if context_window_tokens < 0:
+            raise LLMConfigError("context window must be a non-negative integer")
         structured_roles = {
             "STATE",
             "SCORER",
@@ -84,6 +97,8 @@ class LLMConfig:
             raise LLMConfigError("LLM_THINKING must be enabled, disabled, or omit")
         if response_format not in {"text", "json_object"}:
             raise LLMConfigError("LLM_RESPONSE_FORMAT must be text or json_object")
+        if reasoning_effort not in {"omit", "low", "high", "max"}:
+            raise LLMConfigError("LLM_REASONING_EFFORT must be omit, low, high or max")
         return cls(
             base_url=base_url.rstrip("/"),
             model=model,
@@ -91,6 +106,8 @@ class LLMConfig:
             timeout=timeout,
             thinking=thinking,
             response_format=response_format,
+            reasoning_effort=reasoning_effort,
+            context_window_tokens=context_window_tokens,
         )
 
     @property
@@ -118,6 +135,9 @@ class OpenAICompatibleClient:
         max_token_ceiling: int = 32768,
         max_empty_retries: int = 1,
     ) -> str:
+        self.last_call_trace: list[dict[str, Any]] = []
+        self.last_context_trace: list[dict[str, int]] = []
+        estimated_inputs: dict[str, int] = {}
         token_budget = max(1, int(max_tokens))
         token_ceiling = max(token_budget, int(max_token_ceiling))
         truncation_retries = 0
@@ -132,12 +152,30 @@ class OpenAICompatibleClient:
                 ],
                 "max_tokens": token_budget,
             }
-            if self.config.thinking != "omit":
+            is_k3 = self.config.model.lower() == "kimi-k3"
+            if is_k3:
+                payload["max_completion_tokens"] = payload.pop("max_tokens")
+                if self.config.reasoning_effort != "omit":
+                    payload["reasoning_effort"] = self.config.reasoning_effort
+            if not is_k3 and self.config.thinking != "omit":
                 payload["thinking"] = {"type": self.config.thinking}
-            if self.config.thinking == "disabled":
+            if not is_k3 and self.config.thinking == "disabled":
                 payload["temperature"] = temperature
             if self.config.response_format == "json_object":
                 payload["response_format"] = {"type": "json_object"}
+            if is_k3 and self.config.context_window_tokens:
+                if request_prompt not in estimated_inputs:
+                    endpoint = self.config.chat_url.removesuffix("/chat/completions") + "/tokenizers/estimate-token-count"
+                    estimated = self._post_json(endpoint, {"model": self.config.model, "messages": payload["messages"]}, max_attempts=1)
+                    count = estimated.get("data", {}).get("total_tokens")
+                    if type(count) is not int or count < 0:
+                        raise LLMRequestError("token estimate response is invalid")
+                    estimated_inputs[request_prompt] = count
+                count = estimated_inputs[request_prompt]
+                self.last_context_trace.append({"estimated_input_tokens": count, "reserved_output_tokens": token_budget, "context_window_tokens": self.config.context_window_tokens})
+                if count + token_budget > self.config.context_window_tokens:
+                    raise LLMRequestError("input plus reserved output exceeds context window; no text was silently discarded")
+            started = time.monotonic()
             data = self._post_json(
                 self.config.chat_url,
                 payload,
@@ -150,6 +188,17 @@ class OpenAICompatibleClient:
             except (KeyError, IndexError, TypeError) as exc:
                 raise LLMRequestError("LLM response did not contain choices[0].message") from exc
             finish_reason = str(choice.get("finish_reason") or "")
+            usage = data.get("usage") or {}
+            self.last_call_trace.append({
+                "model": self.config.model,
+                "elapsed_seconds": round(time.monotonic() - started, 3),
+                "finish_reason": finish_reason,
+                "max_tokens": token_budget,
+                "usage": {
+                    key: usage[key] for key in ("prompt_tokens", "completion_tokens", "total_tokens")
+                    if isinstance(usage.get(key), (int, float))
+                } if isinstance(usage, dict) else {},
+            })
             reasoning_characters = len(str(message.get("reasoning_content") or ""))
             output_starved = finish_reason == "length"
             can_retry = (

@@ -62,6 +62,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--project-root", default=".", help="Agent writing project root")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    unit_run = sub.add_parser("unit-run", help="起草或恢复完整单元；不写入正式正文")
+    unit_run.add_argument("--run-id", required=True)
+    unit_run.add_argument("--brief", required=True, help="UTF-8 Markdown/文本或 JSON 作者简报")
+    unit_run.add_argument("--max-chars", type=int, help="正文硬上限，最大 29999")
+    unit_run.add_argument("--preferred-chars", type=int, help="可选篇幅偏好，不是凑字目标")
+    unit_run.add_argument("--critic-thinking", choices=["auto", "enabled", "disabled", "omit"], default="auto")
+    unit_run.add_argument("--from-run", help="把指定旧运行的完整候选复制到新 run-id，仅重新审阅与修订")
+    unit_run.add_argument("--revision-note", help="UTF-8 作者修订要求；配合 from-run 先逐章修订整稿再审阅")
+    unit_run.add_argument("--context-file", action="append", default=[], help="明确选择的前情/风格材料，可重复")
+    unit_run.add_argument("--max-revision-rounds", type=int, default=2)
+    unit_run.add_argument("--max-calls", type=int, default=40)
+    unit_run.add_argument("--max-prompt-chars", type=int, default=90000)
+    unit_status_parser = sub.add_parser("unit-run-status", help="只读查看完整单元运行状态")
+    unit_status_parser.add_argument("--run-id", required=True)
+
     init = sub.add_parser("init", help="initialize a file-first writing project")
     init.add_argument("--name", required=True)
     init.add_argument("--genre", required=True)
@@ -387,6 +402,28 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     root = Path(args.project_root)
+
+    if args.command == "unit-run-status":
+        from .unit_runner import unit_status
+        result = unit_status(root, args.run_id)
+        _print_json({key: result[key] for key in ("run_id", "status", "calls", "body_chars", "selected_revision", "questions", "output", "error_type") if key in result})
+        return 0
+    if args.command == "unit-run":
+        import sys
+        from .unit_runner import run_unit
+        result = run_unit(
+            root, run_id=args.run_id, brief_file=Path(args.brief),
+            context_files=[Path(p) for p in args.context_file],
+            max_revision_rounds=args.max_revision_rounds, max_calls=args.max_calls,
+            max_prompt_chars=args.max_prompt_chars,
+            max_chars=args.max_chars, preferred_chars=args.preferred_chars,
+            critic_thinking=args.critic_thinking,
+            from_run=Path(args.from_run) if args.from_run else None,
+            revision_note_file=Path(args.revision_note) if args.revision_note else None,
+            progress=lambda message: print(message, file=sys.stderr, flush=True),
+        )
+        _print_json({key: result[key] for key in ("run_id", "status", "calls", "body_chars", "selected_revision", "questions", "output") if key in result})
+        return 0
 
     if args.command == "init":
         _print_json(

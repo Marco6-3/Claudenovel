@@ -197,7 +197,6 @@ def _parse_assessments(
     ids = [item.criterion_id for item in assessments]
     if len(ids) != len(set(ids)) or set(ids) != set(criteria):
         raise ValueError("unit completion must assess every criterion exactly once")
-    full_text = "\n".join(evidence_catalog.values())
     for item in assessments:
         unknown = set(item.evidence_ids) - set(evidence_catalog)
         if unknown:
@@ -205,9 +204,10 @@ def _parse_assessments(
                 "unit completion cited unknown evidence IDs: "
                 + ", ".join(sorted(unknown))
             )
-        if item.unit_quote and item.unit_quote not in full_text:
+        cited_texts = [evidence_catalog[eid] for eid in item.evidence_ids]
+        if item.unit_quote and not any(item.unit_quote in text for text in cited_texts):
             raise ValueError(
-                f"unit completion quote not found for {item.criterion_id}: {item.unit_quote}"
+                f"unit completion quote not found in cited evidence for {item.criterion_id}: {item.unit_quote}"
             )
         if item.status in {"met", "partial"} and (
             not item.evidence_ids or not item.unit_quote

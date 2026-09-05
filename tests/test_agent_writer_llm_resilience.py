@@ -3,6 +3,49 @@ from __future__ import annotations
 from agent_writer.llm_client import LLMConfig, OpenAICompatibleClient
 
 
+def test_kimi_k3_uses_native_budget_and_effort_without_deepseek_controls(monkeypatch):
+    client = OpenAICompatibleClient(LLMConfig(base_url="https://example.test/v1", model="kimi-k3", api_key="test", thinking="disabled", reasoning_effort="high"))
+    seen = []
+    def post(url, payload, **kwargs):
+        seen.append(payload)
+        return {"choices": [{"finish_reason": "stop", "message": {"content": "正文"}}]}
+    monkeypatch.setattr(client, "_post_json", post)
+    assert client.complete("写作", max_tokens=4096) == "正文"
+    assert seen[0]["max_completion_tokens"] == 4096
+    assert seen[0]["reasoning_effort"] == "high"
+    assert not {"temperature", "thinking", "max_tokens"} & seen[0].keys()
+
+
+def test_kimi_budget_blocks_generation_without_discarding_input(monkeypatch):
+    import pytest
+    from agent_writer.llm_client import LLMRequestError
+    client = OpenAICompatibleClient(LLMConfig(base_url="https://example.test/v1", model="kimi-k3", api_key="test", context_window_tokens=1000))
+    seen = []
+    def post(url, payload, **kwargs):
+        seen.append(url)
+        return {"data": {"total_tokens": 950}}
+    monkeypatch.setattr(client, "_post_json", post)
+    with pytest.raises(LLMRequestError, match="no text was silently discarded"):
+        client.complete("完整原文", max_tokens=100)
+    assert seen == ["https://example.test/v1/tokenizers/estimate-token-count"]
+
+
+def test_kimi_rechecks_larger_retry_budget(monkeypatch):
+    import pytest
+    from agent_writer.llm_client import LLMRequestError
+    client = OpenAICompatibleClient(LLMConfig(base_url="https://example.test/v1", model="kimi-k3", api_key="test", context_window_tokens=1000))
+    seen = []
+    def post(url, payload, **kwargs):
+        seen.append(url)
+        if "tokenizers" in url:
+            return {"data": {"total_tokens": 850}}
+        return {"choices": [{"finish_reason": "length", "message": {"content": "未完"}}]}
+    monkeypatch.setattr(client, "_post_json", post)
+    with pytest.raises(LLMRequestError, match="exceeds context"):
+        client.complete("原文", max_tokens=100)
+    assert len(seen) == 2  # one estimate and first generation; retry is blocked
+
+
 def test_truncated_thinking_response_retries_with_larger_output_budget(monkeypatch) -> None:
     client = OpenAICompatibleClient(
         LLMConfig(

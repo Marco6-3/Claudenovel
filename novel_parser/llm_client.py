@@ -42,18 +42,21 @@ def load_dotenv(start: Path | None = None) -> None:
 def _env_config() -> Tuple[str, str, str]:
     load_dotenv()
     api_key = (
-        os.environ.get("DEEPSEEK_API_KEY", "").strip()
+        os.environ.get("LLM_API_KEY", "").strip()
+        or os.environ.get("DEEPSEEK_API_KEY", "").strip()
         or os.environ.get("OPENAI_API_KEY", "").strip()
     )
     if not api_key:
         raise LLMConfigError("未配置 DEEPSEEK_API_KEY 或 OPENAI_API_KEY，已跳过 LLM 分析。")
     base_url = (
-        os.environ.get("DEEPSEEK_BASE_URL", "").strip()
+        os.environ.get("LLM_BASE_URL", "").strip()
+        or os.environ.get("DEEPSEEK_BASE_URL", "").strip()
         or os.environ.get("OPENAI_BASE_URL", "").strip()
         or DEFAULT_BASE_URL
     ).rstrip("/")
     model = (
-        os.environ.get("DEEPSEEK_MODEL", "").strip()
+        os.environ.get("LLM_MODEL", "").strip()
+        or os.environ.get("DEEPSEEK_MODEL", "").strip()
         or os.environ.get("OPENAI_MODEL", "").strip()
         or DEFAULT_MODEL
     )
@@ -138,6 +141,14 @@ def build_editorial_prompt(
 def _post_chat(payload: Dict[str, Any], timeout: int = 600) -> Tuple[str, str]:
     api_key, base_url, model = _env_config()
     payload = {**payload, "model": model}
+    if model.lower() == "kimi-k3":
+        for name in ("thinking", "temperature", "top_p", "n", "presence_penalty", "frequency_penalty"):
+            payload.pop(name, None)
+        if "max_tokens" in payload:
+            payload["max_completion_tokens"] = payload.pop("max_tokens")
+        effort = os.environ.get("LLM_REASONING_EFFORT", "omit")
+        if effort != "omit":
+            payload["reasoning_effort"] = effort
     req = urllib.request.Request(
         f"{base_url}/chat/completions",
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),

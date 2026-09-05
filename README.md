@@ -1,10 +1,31 @@
 # Claudenovel
 
-Claudenovel 现在以“人类创意驱动、API-first、滚动时域的单元剧写作”为主。人类或指定外部来源提供核心想法，Agent 只在明确的自由预算内完成规划、场景、人物行动和文字表达。系统维护带证据的跨章 `NovelState`，但每次只激活下一章；不会无人值守连续生成，也不会自动提交正文。
+Claudenovel 以作者提供的单元剧方案为起点，通过 LLM API 起草小说。新的实验入口 `unit-run` 可以在独立草稿中连续写完整个单元、审阅并有限修订，正文严格小于 3 万非空白字符；它不会自动提交正式正文。原有逐章确认的 `agent_writer` 流程继续保留。
+
+## 完整单元草稿（实验功能）
+
+把单元方案直接保存为 UTF-8 Markdown 或文本，不必手写章节合同：
+
+```powershell
+python -X utf8 agent_writer_cli.py --project-root .local_projects/my-novel unit-run --run-id unit-01 --brief 单元方案.md --context-file 前情.md --max-chars 29999
+```
+
+结果在项目的 `drafts/units/unit-01/`：阅读 `完整单元稿.md` 和 `交稿说明.md` 即可。原文、修订、模型响应和恢复信息另行留存。工程验证和文学质量验证分开；机器通过不等于作者应当采用。配置、恢复与限制见 [完整单元运行器说明](docs/UNIT_DRAFT_RUNNER.md)，结构化简报示例见 [examples/unit_brief.json](examples/unit_brief.json)。
+
+当前本地写作配置使用 Kimi K3。运行器已加入选择压力、关系发展与带原文证据的阅读效果观察，并支持 K3 输入加输出的 token 预算预检查。它们是写作辅助机制，尚不能保证成熟网文质量；设计、情感记忆方案和验证边界见 [K3 剧情与情感研究](docs/research/KIMI_K3_STORY_AND_EMOTION_2026-09-05.md)。
 
 仓库原有的中文小说解析、证据化问答和单章诊断仍可作为只读分析工具使用，但不会自动成为新正文的创意真源。
 
-## 核心流程
+## 新单元流程
+
+```text
+作者方案与选定前情 → 简短计划 → 完整单元工作稿
+  → 按原文审阅 → 有限修订 → 交作者通读
+```
+
+作者反馈可通过 `unit-run --from-run 旧运行目录 --revision-note 作者反馈.md` 写入新候选。整个单元写完前不要求逐章正式验收。
+
+## 原有逐章流程
 
 ```text
 外部创意
@@ -17,7 +38,7 @@ Claudenovel 现在以“人类创意驱动、API-first、滚动时域的单元�
   → 人工确认
 ```
 
-设计上的三个硬边界：
+原有流程的设计边界：
 
 - 外部创意排在作者设定和模型偏好的前面。
 - 创意锁缺失或出现明确禁改项时，候选不能进入选优。

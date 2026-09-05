@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import TypeVar
 
@@ -80,7 +81,17 @@ def write_text_atomic(path: Path, text: str) -> Path:
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temp_path, path)
+        # Windows sync/indexing services can briefly open the destination
+        # without delete sharing. Retry the atomic replace, never unlink the
+        # old file or alter its permissions to work around a persistent error.
+        for attempt in range(6):
+            try:
+                os.replace(temp_path, path)
+                break
+            except PermissionError:
+                if attempt == 5:
+                    raise
+                time.sleep(0.025 * (2 ** attempt))
     except Exception:
         temp_path.unlink(missing_ok=True)
         raise
