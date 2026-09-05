@@ -1,0 +1,53 @@
+{
+  "purpose": "保存实测失败机制，供后续固定条件的审稿回归；这些局部片段不能用于评分完整小说的文学质量。",
+  "cases": [
+    {
+      "id": "character_note_invents_experimental_evidence",
+      "run": "u002-k3-low-v2 v0",
+      "chapter": 2,
+      "before": "塑料袋还是被夺了回去。周围几桌都看过来。王磊抱着袋子坐回去，头埋得很低，肩膀一耸一耸，花卷半个半个往嘴里塞，嚼都不嚼。",
+      "after": "断食四小时，急性低血糖。它在他身体底下，断他的食，先垮的是他。",
+      "expected": "正文没有建立成功断食四小时；人物笔记不能反向补造实验过程。收食失败和后来的病情恶化也不足以单独证明伤害共享，需区分猜测与验证结果。v0 审稿引用了真实笔记但仍错把结论当作已经成立。"
+    },
+    {
+      "id": "temporary_suppression_misread_as_required_expulsion",
+      "run": "u002-k3-low-v2 v0",
+      "author_constraint": "凌默用仅有的一缕真气做出数秒的临时阻隔，先保住王磊再驱离。",
+      "chapter": 2,
+      "quote": "那道磨动声猛地一滞，像被人掐住了脖子，尖细地叫了一声，从王磊喉咙深处缩了回去。",
+      "expected": "缩回体内并不等于驱离；需指出作者指定动作未落实，不能把根治目标自行放弃后宣布局部闭合。v0 审稿明确承认未驱除，却仍报告 complete=true。"
+    },
+    {
+      "id": "future_memory_in_earlier_chapter",
+      "run": "u002-v9-action",
+      "context": "旧教学楼用符伤到王磊是第3章首次发生的事件。",
+      "chapter": 2,
+      "quote": "那眼神凌默认得，和旧教学楼那晚一样，带着恐惧，还有藏不住的戒备。",
+      "expected": "第2章提前回忆第3章经历，属于连续性错误。不能靠假设另一次同样经历开脱。"
+    },
+    {
+      "id": "helper_gives_forbidden_early_answer",
+      "run": "u002-v10-action",
+      "author_constraint": "赵灵瑶只做善后警告和留联系方式，不能抢走解决权；不能提前给答案。",
+      "chapter": 2,
+      "quote": "别用驱邪咒碰活人。会先伤宿主。",
+      "related_quote": "赵灵瑶。有人让我看着你点。你这事别一个人扛。有事打这个号。",
+      "expected": "第2章由赵灵瑶预告核心危险，替代主角经错误判断确认共享状态，违反作者指定过程。应移除前置答案；善后联系方式仍需在结尾落实。"
+    },
+    {
+      "id": "empty_resource_restored_without_transition",
+      "run": "u002-v4-review",
+      "before": "符纸剩一张。真气空。王磊对我有戒备。不能再用强。",
+      "after": "丹田里只剩一缕气，细得像根快要断掉的线。",
+      "expected": "检查两处之间是否实际描写恢复；没有则指出资源状态跳变，不默默补写休息恢复。即使模型称其 minor，也应进入事实修订。"
+    },
+    {
+      "id": "unsourced_sender_identity",
+      "run": "u002-v4-review",
+      "before": "陌生号码，只有一句话",
+      "after": "赵灵瑶，电话：138——",
+      "expected": "若短信未署名且没有其他身份来源，主角不能自动知道姓名。修法还须保留作者要求的善后接触，不能仅删姓名便认为任务完成。"
+    }
+  ],
+  "limitations": "必须和原运行的上下文核验；这里只保存定位用片段。正确引文不是正确解释的充分条件，不能把 expected 当成新的小说设定。"
+}
